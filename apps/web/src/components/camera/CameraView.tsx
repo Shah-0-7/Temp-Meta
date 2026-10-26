@@ -13,8 +13,13 @@ import { PermissionGate } from './PermissionGate';
 import { CameraControls } from './CameraControls';
 import { PerfHUD } from '../settings/PerfHUD';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useAppStore } from '../../stores/appStore';
 
-export function CameraView() {
+interface CameraViewProps {
+  onRealisticPhoto?: () => void;
+}
+
+export function CameraView({ onRealisticPhoto }: CameraViewProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const debugCanvasContainerRef = useRef<HTMLDivElement>(null);
   const { cameraState, startCamera, stopCamera, toggleMirror, mirror } = useCamera();
@@ -22,6 +27,7 @@ export function CameraView() {
   const { initTracking, trackingReady, debugOverlay, initProgress } = useTracking(perf, onTrackingResult);
   const showPerfHUD = useSettingsStore((s) => s.showPerfHUD);
   const showDebugOverlay = useSettingsStore((s) => s.showDebugOverlay);
+  const isGeneratingRealistic = useAppStore((s) => s.isGeneratingRealistic);
   const [cameraLoading, setCameraLoading] = useState(false);
 
   // Initialize WebGL when canvas mounts
@@ -107,6 +113,8 @@ export function CameraView() {
           onStop={stopCamera}
           onToggleMirror={toggleMirror}
           mirror={mirror}
+          onRealisticPhoto={onRealisticPhoto}
+          isGeneratingRealistic={isGeneratingRealistic}
         />
 
         {/* Performance HUD */}

@@ -2,14 +2,35 @@ import { useEffect } from 'react';
 import { CameraView } from './components/camera/CameraView';
 import { SettingsPanel } from './components/settings/SettingsPanel';
 import { GarmentPanel } from './components/garment/GarmentPanel';
+import { ConsentDialog } from './components/realistic/ConsentDialog';
+import { RealisticDialog } from './components/realistic/RealisticDialog';
+import { useRealisticPhoto } from './hooks/useRealisticPhoto';
 import { useAppStore } from './stores/appStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useGarmentStore } from './stores/garmentStore';
 
 export function App() {
-  const { engineReady, error } = useAppStore();
+  const {
+    engineReady,
+    error,
+    setError,
+    activeTier,
+    setActiveTier,
+    realisticDialogOpen,
+    setRealisticDialogOpen,
+    consentDialogOpen,
+    setConsentDialogOpen,
+  } = useAppStore();
   const { togglePerfHUD, toggleDebugOverlay, toggleSettings, settingsOpen } = useSettingsStore();
   const { toggleGarmentPanel, garmentPanelOpen, selectedGarment } = useGarmentStore();
+
+  const {
+    triggerRealisticPhoto,
+    cancelGeneration,
+    onConfirmConsent,
+    onCancelConsent,
+    regenerate,
+  } = useRealisticPhoto();
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -26,28 +47,96 @@ export function App() {
         case 'g':
           toggleGarmentPanel();
           break;
+        case 'r':
+          triggerRealisticPhoto();
+          break;
         case 'escape':
           if (settingsOpen) toggleSettings();
           if (garmentPanelOpen) toggleGarmentPanel();
+          if (consentDialogOpen) setConsentDialogOpen(false);
+          if (realisticDialogOpen) setRealisticDialogOpen(false);
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
-  }, [togglePerfHUD, toggleDebugOverlay, toggleSettings, toggleGarmentPanel, settingsOpen, garmentPanelOpen]);
+  }, [
+    togglePerfHUD,
+    toggleDebugOverlay,
+    toggleSettings,
+    toggleGarmentPanel,
+    triggerRealisticPhoto,
+    settingsOpen,
+    garmentPanelOpen,
+    consentDialogOpen,
+    realisticDialogOpen,
+    setConsentDialogOpen,
+    setRealisticDialogOpen,
+  ]);
+
+  // Auto-dismiss errors after 5 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(timer);
+  }, [error, setError]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
+      {/* Toast Notification */}
+      {error && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 glass border border-[var(--color-accent-error)]/40 px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-3 animate-fade-in text-xs sm:text-sm max-w-lg bg-[var(--color-surface-1)]/90 backdrop-blur-md">
+          <span className="text-base text-[var(--color-accent-error)]">⚠️</span>
+          <span className="text-white flex-1 leading-snug">{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="text-[var(--color-text-muted)] hover:text-white p-1 rounded transition-colors"
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="glass flex items-center justify-between px-6 py-3 border-b border-[var(--color-glass-border)] z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">T</span>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
+              <span className="text-white font-bold text-sm">T</span>
+            </div>
+            <h1 className="text-lg font-semibold tracking-tight">
+              Try<span className="text-brand-400">Anywhere</span>
+            </h1>
           </div>
-          <h1 className="text-lg font-semibold tracking-tight">
-            Try<span className="text-brand-400">Anywhere</span>
-          </h1>
+
+          {/* Tier Switch (M5) */}
+          <div className="flex p-0.5 rounded-lg glass border border-[var(--color-glass-border)]">
+            <button
+              onClick={() => setActiveTier('a')}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                activeTier === 'a'
+                  ? 'bg-brand-500/25 text-brand-300 shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-white'
+              }`}
+              title="Real-time WebGL warp preview (Tier A)"
+            >
+              ⚡ Fast Preview
+            </button>
+            <button
+              onClick={() => triggerRealisticPhoto()}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                activeTier === 'b'
+                  ? 'bg-brand-500/25 text-brand-300 shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-white'
+              }`}
+              title="Generate photorealistic try-on (Tier B)"
+            >
+              <span>✨</span>
+              <span>Realistic Photo</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -106,14 +195,20 @@ export function App() {
 
       {/* Main content */}
       <main className="flex-1 relative flex overflow-hidden">
-        {/* Camera viewport */}
-        <CameraView />
+        {/* Camera viewport with Tier B trigger */}
+        <CameraView onRealisticPhoto={triggerRealisticPhoto} />
 
         {/* Garment panel (overlays on left) */}
         <GarmentPanel />
 
         {/* Settings panel (overlays on right) */}
         <SettingsPanel />
+
+        {/* M5 Consent Dialog */}
+        <ConsentDialog onConfirm={onConfirmConsent} onCancel={onCancelConsent} />
+
+        {/* M5 Realistic Result / Progress Dialog */}
+        <RealisticDialog onCancelGeneration={cancelGeneration} onRegenerate={regenerate} />
       </main>
 
       {/* Status bar */}
@@ -121,9 +216,12 @@ export function App() {
         <span>TryAnywhere v0.1 · Meta Global AI Developer Hackathon</span>
         <div className="flex items-center gap-4">
           <span><kbd className="px-1 py-0.5 rounded text-[10px] glass">G</kbd> Garment</span>
+          <span><kbd className="px-1 py-0.5 rounded text-[10px] glass">R</kbd> Realistic Photo</span>
           <span><kbd className="px-1 py-0.5 rounded text-[10px] glass">P</kbd> Perf HUD</span>
           <span><kbd className="px-1 py-0.5 rounded text-[10px] glass">D</kbd> Debug</span>
-          <span>Tier A: Fast Preview</span>
+          <span className="font-semibold text-brand-400">
+            {activeTier === 'b' ? 'Tier B: Realistic Photo' : 'Tier A: Fast Preview'}
+          </span>
         </div>
       </footer>
     </div>

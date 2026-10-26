@@ -32,9 +32,12 @@ export class MockTryOnGenerator implements TryOnGenerator {
   }
 
   async generate(request: TryOnRequest): Promise<TryOnResult> {
-    // Simulate network/processing delay (2–3 seconds)
-    const delay = 2000 + Math.random() * 1000;
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    // Simulate network/processing delay (2–3 seconds by default, configurable for tests)
+    const optionsAny = request.options as any;
+    const delay = typeof optionsAny?.mockDelay === 'number' ? optionsAny.mockDelay : 2000 + Math.random() * 1000;
+    if (delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
 
     // In the real implementation, this sends person frame + garment to Muse Image.
     // For now, return the person frame as-is (the Tier A composite should be
@@ -44,7 +47,8 @@ export class MockTryOnGenerator implements TryOnGenerator {
       editHandle: undefined,
       metadata: {
         provider: 'mock',
-        processingTimeMs: delay,
+        processingTimeMs: Math.round(delay),
+        creditsRemaining: 48,
         note: 'This is the Tier A composite returned as-is. Replace with Meta Muse Image for real generation.',
       },
     };

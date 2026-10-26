@@ -15,6 +15,7 @@ import { loadConfig } from './config.js';
 import { resolveProductUrl } from './services/urlResolver.js';
 import { verifyProxySignature, proxyImage } from './services/imageProxy.js';
 import { SSRFError } from './services/ssrfGuard.js';
+import { createGenerateHandler } from './routes/generate.js';
 
 const config = loadConfig();
 const app = new Hono();
@@ -143,9 +144,7 @@ app.get('/api/proxy', async (c) => {
 // POST /api/generate — Tier B (M5)
 // ---------------------------------------------------------------------------
 
-app.post('/api/generate', (c) =>
-  c.json({ error: 'Not implemented yet — coming in M5' }, 501),
-);
+app.post('/api/generate', createGenerateHandler(config));
 
 // ---------------------------------------------------------------------------
 // POST /api/token — Decart client tokens (M8)
@@ -159,7 +158,8 @@ app.post('/api/token', (c) =>
 // Start
 // ---------------------------------------------------------------------------
 
-console.log(`
+if (process.env.NODE_ENV !== 'test') {
+  console.log(`
 ╔══════════════════════════════════════════╗
 ║  TryAnywhere API Server                  ║
 ║  Port: ${String(config.port).padEnd(33)}║
@@ -168,10 +168,11 @@ console.log(`
 ╚══════════════════════════════════════════╝
 `);
 
-serve({
-  fetch: app.fetch,
-  port: config.port,
-});
+  serve({
+    fetch: app.fetch,
+    port: config.port,
+  });
+}
 
 export default app;
 

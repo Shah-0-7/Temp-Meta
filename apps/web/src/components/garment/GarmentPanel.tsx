@@ -9,9 +9,47 @@ import { URLInput } from './URLInput';
 import { CandidateGrid } from './CandidateGrid';
 import { useGarmentStore } from '../../stores/garmentStore';
 
+const SAMPLE_GARMENTS = [
+  {
+    url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=80',
+    alt: 'White Crewneck Tee',
+    garmentType: 'top' as const,
+    score: 0.95,
+    attributes: { color: 'white', category: 't-shirt' },
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=500&auto=format&fit=crop&q=80',
+    alt: 'Vintage Denim Jacket',
+    garmentType: 'outerwear' as const,
+    score: 0.92,
+    attributes: { color: 'blue', category: 'jacket' },
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=500&auto=format&fit=crop&q=80',
+    alt: 'Casual Grey Hoodie',
+    garmentType: 'top' as const,
+    score: 0.88,
+    attributes: { color: 'grey', category: 'hoodie' },
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=500&auto=format&fit=crop&q=80',
+    alt: 'Emerald Knit Sweater',
+    garmentType: 'top' as const,
+    score: 0.86,
+    attributes: { color: 'green', category: 'sweater' },
+  },
+];
+
 export function GarmentPanel() {
-  const { garmentPanelOpen, selectedGarment, clearGarment, setGarmentPanelOpen, candidates } =
-    useGarmentStore();
+  const {
+    garmentPanelOpen,
+    selectedGarment,
+    clearGarment,
+    setGarmentPanelOpen,
+    candidates,
+    setCandidates,
+    selectCandidate,
+  } = useGarmentStore();
 
   return (
     <>
@@ -34,7 +72,7 @@ export function GarmentPanel() {
           <div>
             <h2 className="text-base font-semibold">Choose Garment</h2>
             <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              Paste a URL or upload an image
+              Paste a URL or try sample garments
             </p>
           </div>
           <button
@@ -54,16 +92,45 @@ export function GarmentPanel() {
           {/* Candidate grid */}
           {candidates.length > 0 && <CandidateGrid />}
 
-          {/* Empty state */}
+          {/* Empty state & Quick demo samples */}
           {candidates.length === 0 && (
-            <div className="flex flex-col items-center gap-3 py-8 text-center">
-              <div className="text-4xl opacity-50">🔍</div>
-              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                Paste a product URL from any store to discover garment images automatically.
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Works with Amazon, ASOS, Zara, H&M, and more.
-              </p>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <div className="text-3xl opacity-50">🔍</div>
+                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                  Paste any product URL, or select a demo garment below to test instantly:
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <span className="text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
+                  Demo Garment Presets
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {SAMPLE_GARMENTS.map((garment, idx) => (
+                    <button
+                      key={garment.url}
+                      onClick={() => {
+                        setCandidates(SAMPLE_GARMENTS, 'Sample Garments');
+                        selectCandidate(idx);
+                      }}
+                      className="flex flex-col items-center p-2 rounded-xl glass hover:bg-white/10 transition-all border border-[var(--color-glass-border)] group text-left cursor-pointer"
+                    >
+                      <img
+                        src={garment.url}
+                        alt={garment.alt}
+                        className="w-full aspect-square rounded-lg object-cover bg-black/40 mb-1.5 group-hover:scale-105 transition-transform"
+                      />
+                      <span className="text-xs font-medium text-white line-clamp-1 w-full text-center">
+                        {garment.alt}
+                      </span>
+                      <span className="text-[10px] text-brand-400 capitalize">
+                        {garment.garmentType}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -6,7 +6,6 @@
  * response size, and request timeout.
  */
 
-import { createConnection } from 'net';
 import { URL } from 'url';
 
 export class SSRFError extends Error {

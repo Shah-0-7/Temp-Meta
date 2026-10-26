@@ -74,3 +74,14 @@ Each entry records what was decided, why, and any alternatives considered.
 **Date:** 2026-10-25  
 **Decision:** AutoAdapt monitors p95 frame time and cascades: tracking rate (30→20→15), then disable segmentation. Steps down after 2s overload, up after 5s headroom.  
 **Why:** Ensures the app stays responsive on slower hardware. Users see a toast notification on each step. Manual override available in settings.
+
+## D14 — Zero-persistence Tier B Photo Pipeline
+**Date:** 2026-10-26  
+**Decision:** All frames and garment inputs sent to `POST /api/generate` are processed strictly in-memory and discarded immediately upon response completion. No disk writes, no caching of camera frames, and zero payload logging.  
+**Why:** Privacy is paramount for virtual try-on involving user camera frames. Zero persistence ensures user trust and compliance with privacy standards.
+
+## D15 — Split compare slider with side-by-side fallback
+**Date:** 2026-10-26  
+**Decision:** Comparison between Tier A (Fast Preview) and Tier B (Realistic Photo) provides an interactive draggable split slider with smooth clip-path clipping, alongside a toggle to switch to side-by-side view.  
+**Why:** Gives users an intuitive way to visually verify differences in drape, texture, and photorealism at a glance.
+
