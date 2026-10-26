@@ -5,94 +5,105 @@
  * Creates, starts/stops the camera, and syncs state to the Zustand store.
  */
 
-import { useRef, useCallback, useEffect } from 'react';
-import { CameraManager } from '@tryanywhere/engine';
+import { useCallback, useEffect } from 'react';
+import { CameraManager, type ResolutionPreset } from '@tryanywhere/engine';
 import { useCameraStore } from '../stores/cameraStore';
 
 /** Singleton CameraManager — shared across components. */
 let cameraManagerInstance: CameraManager | null = null;
 
-export function getCameraManager(): CameraManager | null {
+export function getCameraManager(): CameraManager {
+  if (!cameraManagerInstance) {
+    cameraManagerInstance = new CameraManager();
+  }
   return cameraManagerInstance;
 }
 
 export function useCamera() {
-  const store = useCameraStore();
-  const managerRef = useRef<CameraManager | null>(null);
+  const cameraState = useCameraStore((s) => s.cameraState);
+  const resolution = useCameraStore((s) => s.resolution);
+  const mirror = useCameraStore((s) => s.mirror);
+  const fpsCap = useCameraStore((s) => s.fpsCap);
+  const feedSource = useCameraStore((s) => s.feedSource);
+  const devices = useCameraStore((s) => s.devices);
+  const activeDeviceId = useCameraStore((s) => s.activeDeviceId);
+  const actualWidth = useCameraStore((s) => s.actualWidth);
+  const actualHeight = useCameraStore((s) => s.actualHeight);
+  const isFeedBlack = useCameraStore((s) => s.isFeedBlack);
 
-  // Create manager on mount
+  const mgr = getCameraManager();
+
+  // Sync state changes to store (subscribes once on mount)
   useEffect(() => {
-    if (!managerRef.current) {
-      const mgr = new CameraManager({
-        resolution: store.resolution,
-        mirror: store.mirror,
-        fpsCap: store.fpsCap,
-      });
-      managerRef.current = mgr;
-      cameraManagerInstance = mgr;
-
-      // Sync state changes to store
-      mgr.onStateChange((state) => {
-        store.setCameraState(state);
-        if (state === 'active') {
-          const res = mgr.actualResolution;
-          if (res) {
-            store.setActualResolution(res.width, res.height);
-          }
-          store.setDevices(mgr.devices);
-        }
-      });
+    // Initial sync
+    if (useCameraStore.getState().cameraState !== mgr.state) {
+      useCameraStore.getState().setCameraState(mgr.state);
     }
 
-    return () => {
-      managerRef.current?.stop();
-      managerRef.current = null;
-      cameraManagerInstance = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const unsub = mgr.onStateChange((state) => {
+      useCameraStore.getState().setCameraState(state);
+      if (state === 'active') {
+        const res = mgr.actualResolution;
+        if (res) {
+          useCameraStore.getState().setActualResolution(res.width, res.height);
+        }
+        useCameraStore.getState().setDevices(mgr.devices);
+      }
+    });
+
+    return unsub;
+  }, [mgr]);
 
   const startCamera = useCallback(async () => {
-    const mgr = managerRef.current;
-    if (!mgr) return;
+    useCameraStore.getState().setFeedSource('webcam');
     await mgr.start();
-  }, []);
+  }, [mgr]);
+
+  const startDemo = useCallback(async (preset = 'female') => {
+    useCameraStore.getState().setFeedSource('demo');
+    await mgr.startDemo(preset);
+  }, [mgr]);
+
+  const startWithImage = useCallback(async (source: HTMLImageElement | string) => {
+    useCameraStore.getState().setFeedSource('photo');
+    await mgr.startWithImage(source);
+  }, [mgr]);
 
   const stopCamera = useCallback(() => {
-    const mgr = managerRef.current;
-    if (!mgr) return;
     mgr.stop();
-  }, []);
+  }, [mgr]);
 
   const switchDevice = useCallback(async (deviceId: string) => {
-    const mgr = managerRef.current;
-    if (!mgr) return;
-    store.setActiveDeviceId(deviceId);
+    useCameraStore.getState().setActiveDeviceId(deviceId);
     await mgr.setDevice(deviceId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mgr]);
 
-  const switchResolution = useCallback(async (preset: Parameters<typeof store.setResolution>[0]) => {
-    const mgr = managerRef.current;
-    if (!mgr) return;
-    store.setResolution(preset);
+  const switchResolution = useCallback(async (preset: ResolutionPreset) => {
+    useCameraStore.getState().setResolution(preset);
     await mgr.setResolution(preset);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mgr]);
 
   const toggleMirror = useCallback(() => {
-    const mgr = managerRef.current;
-    if (!mgr) return;
-    const next = !store.mirror;
-    store.setMirror(next);
+    const next = !useCameraStore.getState().mirror;
+    useCameraStore.getState().setMirror(next);
     mgr.setMirror(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mgr]);
 
   return {
-    ...store,
-    manager: managerRef.current,
+    cameraState,
+    resolution,
+    mirror,
+    fpsCap,
+    feedSource,
+    devices,
+    activeDeviceId,
+    actualWidth,
+    actualHeight,
+    isFeedBlack,
+    manager: mgr,
     startCamera,
+    startDemo,
+    startWithImage,
     stopCamera,
     switchDevice,
     switchResolution,

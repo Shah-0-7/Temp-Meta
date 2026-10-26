@@ -9,7 +9,7 @@
  * Falls back to PassthroughRenderer on WebGL2 unavailability.
  */
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import {
   WebGLContext,
   TierARenderer,
@@ -35,6 +35,8 @@ export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
   const setError = useAppStore((s) => s.setError);
   const selectedGarment = useGarmentStore((s) => s.selectedGarment);
 
+  const [glReady, setGlReady] = useState(false);
+
   // Initialize WebGL when canvas is available
   const initWebGL = useCallback(() => {
     const canvas = canvasRef.current;
@@ -47,6 +49,7 @@ export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
       const renderer = new TierARenderer(ctx);
       rendererRef.current = renderer;
 
+      setGlReady(true);
       setEngineReady(true);
       console.log('[useEngine] TierA WebGL2 renderer initialized');
     } catch (err) {
@@ -58,7 +61,7 @@ export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
 
   // Wire camera frames to the renderer
   useEffect(() => {
-    if (cameraState !== 'active') return;
+    if (cameraState !== 'active' || !glReady) return;
 
     const mgr = getCameraManager();
     const renderer = rendererRef.current;
@@ -86,7 +89,7 @@ export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
       unsubFrame();
       cleanupRef.current = null;
     };
-  }, [cameraState]);
+  }, [cameraState, glReady]);
 
   // Update mirror
   useEffect(() => {

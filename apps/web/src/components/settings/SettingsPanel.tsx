@@ -30,7 +30,7 @@ const TRACKING_RATES = [
 
 export function SettingsPanel() {
   const settings = useSettingsStore();
-  const { switchResolution, cameraState } = useCamera();
+  const { switchResolution, switchDevice, devices, activeDeviceId, cameraState } = useCamera();
 
   const handleResolutionChange = async (preset: ResolutionPreset) => {
     settings.setResolution(preset);
@@ -56,6 +56,30 @@ export function SettingsPanel() {
       </div>
 
       <div className="px-5 py-4 flex flex-col gap-6">
+        {/* Camera Devices */}
+        {devices.length > 1 && (
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+              Camera Device
+            </h3>
+            <div className="flex flex-col gap-1.5">
+              {devices.map((device) => (
+                <button
+                  key={device.deviceId}
+                  onClick={() => switchDevice(device.deviceId)}
+                  className={`px-3 py-2 rounded-lg text-sm text-left transition-colors truncate ${
+                    activeDeviceId === device.deviceId
+                      ? 'bg-brand-600/20 text-brand-300 border border-brand-500/30'
+                      : 'glass text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                  }`}
+                  title={device.label}
+                >
+                  📹 {device.label || `Camera ${device.deviceId.slice(0, 5)}...`}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
         {/* Resolution */}
         <section>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">

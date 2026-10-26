@@ -8,6 +8,8 @@
 import { create } from 'zustand';
 import type { CameraState, CameraDevice, ResolutionPreset } from '@tryanywhere/engine';
 
+export type FeedSource = 'webcam' | 'demo' | 'photo';
+
 export interface CameraStoreState {
   /** Current camera lifecycle state */
   cameraState: CameraState;
@@ -24,6 +26,10 @@ export interface CameraStoreState {
   mirror: boolean;
   /** FPS cap (0 = uncapped) */
   fpsCap: number;
+  /** Active video feed source: real webcam, demo model, or uploaded photo */
+  feedSource: FeedSource;
+  /** Whether the active video track appears black/blank */
+  isFeedBlack: boolean;
 
   // Actions
   setCameraState: (state: CameraState) => void;
@@ -34,6 +40,8 @@ export interface CameraStoreState {
   setMirror: (mirror: boolean) => void;
   toggleMirror: () => void;
   setFpsCap: (fps: number) => void;
+  setFeedSource: (source: FeedSource) => void;
+  setIsFeedBlack: (isBlack: boolean) => void;
 }
 
 export const useCameraStore = create<CameraStoreState>((set) => ({
@@ -45,6 +53,8 @@ export const useCameraStore = create<CameraStoreState>((set) => ({
   actualHeight: 0,
   mirror: true,
   fpsCap: 0,
+  feedSource: 'webcam',
+  isFeedBlack: false,
 
   setCameraState: (cameraState) => set({ cameraState }),
   setDevices: (devices) => set({ devices }),
@@ -54,4 +64,6 @@ export const useCameraStore = create<CameraStoreState>((set) => ({
   setMirror: (mirror) => set({ mirror }),
   toggleMirror: () => set((s) => ({ mirror: !s.mirror })),
   setFpsCap: (fpsCap) => set({ fpsCap }),
+  setFeedSource: (feedSource) => set({ feedSource }),
+  setIsFeedBlack: (isFeedBlack) => set({ isFeedBlack }),
 }));
