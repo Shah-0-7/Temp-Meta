@@ -4,16 +4,17 @@
  * Floating controls overlaid on the camera view:
  * - Stop camera
  * - Toggle mirror
- * - Snapshot (future)
+ * - Realistic render of the current frame
  */
 
 interface CameraControlsProps {
   onStop: () => void;
   onToggleMirror: () => void;
+  onSnapshot: () => void;
   mirror: boolean;
 }
 
-export function CameraControls({ onStop, onToggleMirror, mirror }: CameraControlsProps) {
+export function CameraControls({ onStop, onToggleMirror, onSnapshot, mirror }: CameraControlsProps) {
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
       {/* Stop camera */}
@@ -38,11 +39,12 @@ export function CameraControls({ onStop, onToggleMirror, mirror }: CameraControl
         ↔
       </button>
 
-      {/* Snapshot (placeholder for M7) */}
+      {/* Snapshot -> realistic render */}
       <button
+        onClick={onSnapshot}
         className="w-10 h-10 rounded-full glass flex items-center justify-center text-[var(--color-text-secondary)] hover:text-white transition-colors text-lg"
-        title="Take snapshot (Space)"
-        aria-label="Take snapshot"
+        title="Realistic render of this moment (Space)"
+        aria-label="Realistic render"
       >
         📷
       </button>

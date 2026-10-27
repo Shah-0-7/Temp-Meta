@@ -2,7 +2,7 @@
   "name": "tryanywhere",
   "private": true,
   "version": "0.1.0",
-  "description": "Universal Virtual Try-On — see yourself wearing clothes from any online store",
+  "description": "Universal Virtual Try-On \u2014 see yourself wearing clothes from any online store",
   "scripts": {
     "dev": "concurrently \"pnpm --filter @tryanywhere/server dev\" \"pnpm --filter @tryanywhere/web dev\"",
     "dev:web": "pnpm --filter @tryanywhere/web dev",
@@ -13,7 +13,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "setup:assets": "node scripts/setup-assets.mjs",
+    "postinstall": "node scripts/setup-assets.mjs || true"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

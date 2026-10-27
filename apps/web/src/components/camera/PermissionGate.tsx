@@ -12,11 +12,14 @@ import { useCameraStore } from '../../stores/cameraStore';
 
 interface PermissionGateProps {
   onRequestCamera: () => void;
+  /** Render an uploaded photo instead of using the camera. */
+  onUploadPhoto?: (file: File) => void;
   children: React.ReactNode;
 }
 
-export function PermissionGate({ onRequestCamera, children }: PermissionGateProps) {
+export function PermissionGate({ onRequestCamera, onUploadPhoto, children }: PermissionGateProps) {
   const cameraState = useCameraStore((s) => s.cameraState);
+  const errorMessage = useCameraStore((s) => s.errorMessage);
 
   if (cameraState === 'active') {
     return <>{children}</>;
@@ -41,8 +44,7 @@ export function PermissionGate({ onRequestCamera, children }: PermissionGateProp
           Camera access denied
         </h3>
         <p className="text-[var(--color-text-secondary)] text-center text-sm leading-relaxed">
-          TryAnywhere needs camera access for the live try-on preview.
-          To enable it:
+          {errorMessage ?? 'TryAnywhere needs camera access for the live try-on preview.'} To enable it:
         </p>
         <ol className="text-sm text-[var(--color-text-secondary)] space-y-2 text-left">
           <li className="flex gap-2">
@@ -76,7 +78,7 @@ export function PermissionGate({ onRequestCamera, children }: PermissionGateProp
           Camera error
         </h3>
         <p className="text-[var(--color-text-secondary)] text-center text-sm">
-          Could not access your camera. Make sure no other app is using it and try again.
+          {errorMessage ?? 'Could not access your camera. Make sure no other app is using it and try again.'}
         </p>
         <button
           onClick={onRequestCamera}
@@ -109,9 +111,19 @@ export function PermissionGate({ onRequestCamera, children }: PermissionGateProp
         >
           📸 Enable Camera
         </button>
-        <button className="px-6 py-3 rounded-xl glass text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-medium transition-all duration-200">
+        <label className="px-6 py-3 rounded-xl glass text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-medium transition-all duration-200 text-center cursor-pointer">
           🖼️ Upload a Photo Instead
-        </button>
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onUploadPhoto?.(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
       </div>
       <p className="text-xs text-[var(--color-text-muted)]">
         Your camera feed never leaves your device in Fast Preview mode.

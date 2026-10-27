@@ -30,7 +30,7 @@ const TRACKING_RATES = [
 
 export function SettingsPanel() {
   const settings = useSettingsStore();
-  const { switchResolution, cameraState } = useCamera();
+  const { switchResolution, switchDevice, cameraState, devices, activeDeviceId, actualWidth, actualHeight, actualFps } = useCamera();
 
   const handleResolutionChange = async (preset: ResolutionPreset) => {
     settings.setResolution(preset);
@@ -120,6 +120,81 @@ export function SettingsPanel() {
               </button>
             ))}
           </div>
+        </section>
+
+        {/* Camera device + what the browser actually gave us */}
+        {cameraState === 'active' && (
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+              Camera
+            </h3>
+            {devices.length > 1 && (
+              <select
+                value={activeDeviceId ?? ''}
+                onChange={(e) => void switchDevice(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg glass text-sm text-[var(--color-text-secondary)] mb-2 bg-transparent"
+                aria-label="Camera device"
+              >
+                {activeDeviceId === null && <option value="">Default camera</option>}
+                {devices.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            )}
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Receiving {actualWidth}×{actualHeight}
+              {actualFps ? ` @ ${Math.round(actualFps)} fps` : ''}
+            </p>
+          </section>
+        )}
+
+        {/* Body tracking model */}
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+            Body tracking
+          </h3>
+          <div className="flex gap-2">
+            {([
+              { value: 'full', label: 'Accurate' },
+              { value: 'lite', label: 'Fast' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => settings.setPoseModel(opt.value)}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm text-center transition-colors ${
+                  settings.poseModel === opt.value
+                    ? 'bg-brand-600/20 text-brand-300 border border-brand-500/30'
+                    : 'glass text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1.5">
+            Fast uses a lighter model for older laptops.
+          </p>
+        </section>
+
+        {/* Garment lighting */}
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+            Fabric shading
+          </h3>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(settings.garmentShading * 100)}
+            onChange={(e) => settings.setGarmentShading(Number(e.target.value) / 100)}
+            className="w-full accent-brand-500"
+            aria-label="Fabric shading strength"
+          />
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Carries folds and shadows from what you wear now onto the garment. {Math.round(settings.garmentShading * 100)}%
+          </p>
         </section>
 
         {/* Toggles */}

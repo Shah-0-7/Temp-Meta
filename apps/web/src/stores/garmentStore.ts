@@ -16,6 +16,13 @@ export interface GarmentCandidateWithProxy extends GarmentCandidate {
   height?: number;
 }
 
+/** How the garment image was prepared for rendering. */
+export interface GarmentPrepInfo {
+  mode: 'existing-alpha' | 'flood-fill' | 'mask' | 'none';
+  confidence: number;
+  loadError: string | null;
+}
+
 export type GarmentInputMode = 'url' | 'upload' | 'none';
 
 export interface GarmentStoreState {
@@ -33,6 +40,7 @@ export interface GarmentStoreState {
   selectedIndex: number | null;
   selectedGarment: GarmentCandidateWithProxy | null;
   garmentPanelOpen: boolean;
+  prep: GarmentPrepInfo | null;
 
   // Actions
   setInputMode: (mode: GarmentInputMode) => void;
@@ -44,6 +52,7 @@ export interface GarmentStoreState {
   clearGarment: () => void;
   setGarmentPanelOpen: (open: boolean) => void;
   toggleGarmentPanel: () => void;
+  setPrep: (prep: GarmentPrepInfo | null) => void;
 }
 
 export const useGarmentStore = create<GarmentStoreState>((set) => ({
@@ -56,6 +65,7 @@ export const useGarmentStore = create<GarmentStoreState>((set) => ({
   selectedIndex: null,
   selectedGarment: null,
   garmentPanelOpen: false,
+  prep: null,
 
   setInputMode: (inputMode) => set({ inputMode, resolveError: null }),
   setUrlInput: (urlInput) => set({ urlInput, resolveError: null }),
@@ -69,7 +79,8 @@ export const useGarmentStore = create<GarmentStoreState>((set) => ({
       selectedGarment: s.candidates[index] ?? null,
     })),
   clearGarment: () =>
-    set({ selectedIndex: null, selectedGarment: null, candidates: [], urlInput: '', inputMode: 'none', pageTitle: null }),
+    set({ selectedIndex: null, selectedGarment: null, candidates: [], urlInput: '', inputMode: 'none', pageTitle: null, prep: null }),
   setGarmentPanelOpen: (garmentPanelOpen) => set({ garmentPanelOpen }),
   toggleGarmentPanel: () => set((s) => ({ garmentPanelOpen: !s.garmentPanelOpen })),
+  setPrep: (prep) => set({ prep }),
 }));

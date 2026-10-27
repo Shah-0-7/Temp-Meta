@@ -74,3 +74,39 @@ Each entry records what was decided, why, and any alternatives considered.
 **Date:** 2026-10-25  
 **Decision:** AutoAdapt monitors p95 frame time and cascades: tracking rate (30→20→15), then disable segmentation. Steps down after 2s overload, up after 5s headroom.  
 **Why:** Ensures the app stays responsive on slower hardware. Users see a toast notification on each step. Manual override available in settings.
+
+## D14 — MLS warp replaces Gaussian-blend / TPS
+**Date:** 2026-10-27  
+**Decision:** Deform the garment mesh with Moving Least Squares (similarity) in an isotropic space (x scaled by aspect ratio). Pins: shoulders, armpits, hem, neck, and sleeve ends along shoulder→elbow→wrist.  
+**Why:** Similarity MLS keeps the fabric's shape (no shear) while following the body, needs no matrix solve per frame, and is stable with 8-12 pins. Supersedes D8 (TPS). The hem is as wide as the shirt, not the hip joints, so shirts do not taper. Missing hips are extrapolated from shoulders.
+
+## D15 — Premultiplied alpha end to end
+**Date:** 2026-10-27  
+**Decision:** Upload garments premultiplied (with mipmaps and anisotropic filtering) and blend with `ONE, ONE_MINUS_SRC_ALPHA`.  
+**Why:** Removes light/dark halos on cut-out edges and keeps the canvas opaque.
+
+## D16 — Garment cut-out without a model
+**Date:** 2026-10-27  
+**Decision:** Existing alpha, else border-colour flood fill, then component filtering, erode+feather, defringe and tight crop. Anchors are measured from the silhouette. Falls back to the whole image when confidence is low.  
+**Why:** Works offline with no API key; Meta SAM 3.1 later replaces it through `GarmentSegmenter`. Known weakness: white-on-white edges (use manual select).
+
+## D17 — Local "Realistic render" is the default TryOnGenerator
+**Date:** 2026-10-27  
+**Decision:** `LocalTryOnGenerator` (name `local`) renders the captured frame at full resolution with frame-exact pose and segmentation, a 40x40 mesh, MSAA and lighting transfer. It runs on-device; nothing is uploaded. Meta Muse Image implements the same `TryOnGenerator` interface later. `createAppRegistry` registers it as the default.  
+**Why:** Lets the full flow work and be demoed before Meta keys arrive. It cannot repaint what the user is wearing (see KNOWN_LIMITATIONS).
+
+## D18 — One camera manager, driven by requestVideoFrameCallback
+**Date:** 2026-10-27  
+**Decision:** `getCameraManager()` is a true singleton. Tracking runs on `requestVideoFrameCallback`, with strictly increasing timestamps, segmentation on every 2nd tick, and a constraint fallback chain for cameras that reject the requested size.  
+**Why:** The previous code created a manager per component, so the preview and tracker used different cameras.
+
+## D19 — One Euro filter retuned for normalized coordinates
+**Date:** 2026-10-27  
+**Decision:** `minCutoff 1.0, beta 12, dCutoff 1.0` (exported as `POSE_FILTER_DEFAULTS`).  
+**Why:** The old beta (0.01) is meant for pixel units and lagged about 0.2 s on normalized 0..1 landmarks.
+
+## D20 — MediaPipe assets: same-origin first, pinned CDN second
+**Date:** 2026-10-27  
+**Decision:** `scripts/setup-assets.mjs` copies the WASM and downloads models to `apps/web/public/{mediapipe,models}` (git-ignored). At runtime the app probes the local files (rejecting SPA HTML fallbacks) and otherwise uses the CDN at the pinned version `1.1.1`. Supersedes D12's `@latest`.  
+**Why:** Offline demos, no WASM/JS version mismatch.
+

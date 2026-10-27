@@ -23,6 +23,10 @@ export interface SettingsStoreState {
   showDebugOverlay: boolean;
   /** Settings panel open/closed */
   settingsOpen: boolean;
+  /** Body model: 'full' is more accurate, 'lite' is lighter on weak machines. Applied on the next tracking start. */
+  poseModel: 'lite' | 'full';
+  /** Lighting transfer from your own clothes onto the garment, 0..1 */
+  garmentShading: number;
 
   // Actions
   setResolution: (r: ResolutionPreset) => void;
@@ -33,6 +37,8 @@ export interface SettingsStoreState {
   toggleDebugOverlay: () => void;
   toggleSettings: () => void;
   setSettingsOpen: (open: boolean) => void;
+  setPoseModel: (m: 'lite' | 'full') => void;
+  setGarmentShading: (v: number) => void;
 }
 
 export const useSettingsStore = create<SettingsStoreState>((set) => ({
@@ -43,6 +49,8 @@ export const useSettingsStore = create<SettingsStoreState>((set) => ({
   showPerfHUD: false,
   showDebugOverlay: false,
   settingsOpen: false,
+  poseModel: 'full',
+  garmentShading: 0.5,
 
   setResolution: (resolution) => set({ resolution }),
   setFpsCap: (fpsCap) => set({ fpsCap }),
@@ -52,4 +60,6 @@ export const useSettingsStore = create<SettingsStoreState>((set) => ({
   toggleDebugOverlay: () => set((s) => ({ showDebugOverlay: !s.showDebugOverlay })),
   toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen })),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  setPoseModel: (poseModel) => set({ poseModel }),
+  setGarmentShading: (garmentShading) => set({ garmentShading }),
 }));

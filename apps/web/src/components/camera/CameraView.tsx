@@ -1,117 +1,117 @@
 /**
  * @module components/camera/CameraView
  *
- * The main camera viewport — renders the WebGL canvas
- * with the camera passthrough, debug overlay, and tracking.
+ * The camera viewport: the WebGL canvas (ALWAYS mounted, so the renderer exists
+ * before the camera starts), pose hints, controls, and the render panel.
  */
 
 import { useRef, useEffect, useState } from 'react';
-import { useCamera } from '../../hooks/useCamera';
+import { useCamera, getCameraManager } from '../../hooks/useCamera';
 import { useEngine } from '../../hooks/useEngine';
 import { useTracking } from '../../hooks/useTracking';
+import { useRealisticRender } from '../../hooks/useRealisticRender';
 import { PermissionGate } from './PermissionGate';
 import { CameraControls } from './CameraControls';
+import { PoseHint } from './PoseHint';
+import { RenderPanel } from './RenderPanel';
 import { PerfHUD } from '../settings/PerfHUD';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useCameraStore } from '../../stores/cameraStore';
 
 export function CameraView() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const debugCanvasContainerRef = useRef<HTMLDivElement>(null);
-  const { cameraState, startCamera, stopCamera, toggleMirror, mirror } = useCamera();
-  const { initWebGL, perf, onTrackingResult } = useEngine(canvasRef);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const { cameraState, startCamera, stopCamera, toggleMirror, mirror, actualWidth, actualHeight } = useCamera();
+  const { perf, onTrackingResult } = useEngine(canvasRef);
   const { initTracking, trackingReady, debugOverlay, initProgress } = useTracking(perf, onTrackingResult);
+  const { render, renderPhoto } = useRealisticRender();
   const showPerfHUD = useSettingsStore((s) => s.showPerfHUD);
   const showDebugOverlay = useSettingsStore((s) => s.showDebugOverlay);
-  const [cameraLoading, setCameraLoading] = useState(false);
+  const fpsCap = useSettingsStore((s) => s.fpsCap);
+  const [starting, setStarting] = useState(false);
 
-  // Initialize WebGL when canvas mounts
+  const active = cameraState === 'active';
+
+  // Apply the FPS cap to the real camera loop.
   useEffect(() => {
-    if (canvasRef.current) {
-      initWebGL();
-    }
-  }, [initWebGL]);
+    getCameraManager().setFpsCap(fpsCap);
+    useCameraStore.getState().setFpsCap(fpsCap);
+  }, [fpsCap]);
 
-  // Mount debug overlay canvas
+  // Mount the debug overlay on top of the canvas, letterboxed exactly like it.
   useEffect(() => {
-    if (showDebugOverlay && debugOverlay && debugCanvasContainerRef.current) {
-      const canvas = debugOverlay.canvas;
-      canvas.style.position = 'absolute';
-      canvas.style.top = '0';
-      canvas.style.left = '0';
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.pointerEvents = 'none';
-      debugCanvasContainerRef.current.appendChild(canvas);
-
-      return () => {
-        if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-      };
-    }
+    const stage = stageRef.current;
+    if (!showDebugOverlay || !debugOverlay || !stage) return;
+    const c = debugOverlay.canvas;
+    Object.assign(c.style, {
+      position: 'absolute', inset: '0', width: '100%', height: '100%',
+      objectFit: 'contain', pointerEvents: 'none',
+    });
+    stage.appendChild(c);
+    return () => {
+      c.parentNode?.removeChild(c);
+    };
   }, [showDebugOverlay, debugOverlay]);
 
   const handleRequestCamera = async () => {
-    setCameraLoading(true);
+    setStarting(true);
     try {
       await startCamera();
-      // Initialize tracking after camera starts
-      await initTracking();
+      // Tracking loads after the preview is already live, so the user sees themselves immediately.
+      void initTracking();
     } catch {
-      // Error state handled by store
+      // The camera store carries the readable reason.
     } finally {
-      setCameraLoading(false);
+      setStarting(false);
     }
   };
 
   return (
     <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-[var(--color-surface-1)]">
-      <PermissionGate onRequestCamera={handleRequestCamera}>
-        {/* Canvas container — holds WebGL + debug overlay */}
-        <div ref={debugCanvasContainerRef} className="relative max-w-full max-h-full">
-          {/* WebGL Canvas */}
-          <canvas
-            ref={canvasRef}
-            className="max-w-full max-h-full object-contain rounded-lg"
-            style={{ imageRendering: 'auto' }}
-          />
-        </div>
+      {/* Canvas stays mounted; hidden until the camera is live. */}
+      <div ref={stageRef} className={`relative w-full h-full ${active ? '' : 'hidden'}`}>
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full object-contain"
+          style={{
+            aspectRatio: actualWidth && actualHeight ? `${actualWidth} / ${actualHeight}` : undefined,
+          }}
+          aria-label="Live camera preview with garment"
+        />
+      </div>
 
-        {/* Loading indicator for tracking init */}
-        {cameraLoading && (
+      <PermissionGate onRequestCamera={handleRequestCamera} onUploadPhoto={(f) => void renderPhoto(f)}>
+        {starting && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-sm flex items-center gap-2 z-10">
             <div className="w-4 h-4 border-2 border-brand-400/30 border-t-brand-400 rounded-full animate-spin" />
-            <span className="text-[var(--color-text-secondary)]">
-              {initProgress || 'Starting camera…'}
-            </span>
+            <span className="text-[var(--color-text-secondary)]">Starting camera…</span>
           </div>
         )}
 
-        {/* Tracking status */}
-        {cameraState === 'active' && !trackingReady && !cameraLoading && (
+        {!starting && initProgress && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-sm flex items-center gap-2 z-10">
             <div className="w-4 h-4 border-2 border-brand-400/30 border-t-brand-400 rounded-full animate-spin" />
-            <span className="text-[var(--color-text-secondary)]">
-              {initProgress || 'Loading tracking models…'}
-            </span>
+            <span className="text-[var(--color-text-secondary)]">{initProgress}</span>
           </div>
         )}
 
-        {/* Debug overlay indicator */}
+        {!initProgress && <PoseHint trackingReady={trackingReady} />}
+
         {showDebugOverlay && trackingReady && (
-          <div className="absolute top-3 right-3 glass rounded-lg px-2 py-1 text-xs text-brand-400 z-10">
-            DEBUG
-          </div>
+          <div className="absolute top-3 right-3 glass rounded-lg px-2 py-1 text-xs text-brand-400 z-10">DEBUG</div>
         )}
 
-        {/* Overlay controls */}
         <CameraControls
           onStop={stopCamera}
           onToggleMirror={toggleMirror}
+          onSnapshot={() => void render()}
           mirror={mirror}
         />
 
-        {/* Performance HUD */}
         {showPerfHUD && <PerfHUD monitor={perf} />}
       </PermissionGate>
+
+      <RenderPanel />
     </div>
   );
 }

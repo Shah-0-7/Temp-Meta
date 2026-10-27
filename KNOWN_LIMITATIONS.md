@@ -23,7 +23,21 @@ Updated as development progresses.
 - **Transparent / sheer garments.** The renderer treats the garment as opaque. Semi-transparent fabrics won't look correct.
 - **Size accuracy.** The "fit" slider is cosmetic (scales mesh width). It does not account for actual garment sizing or body measurements.
 
-## Tier B — Realistic Photo (server-side generation)
+## Tier B — Realistic Photo, local renderer (default, no API key)
+
+### What it can do
+- Re-renders the captured frame at full camera resolution (up to 2048 px) with a finer mesh, frame-exact pose/segmentation and lighting transfer
+- Keeps face, hair and hands in front of the garment
+- Runs entirely on-device; nothing is uploaded. Works offline once `pnpm setup:assets` has run
+- Download as PNG, before/after compare slider, and a "upload a photo" fallback
+
+### What it cannot do
+- **Cannot repaint what you are wearing.** Your own sleeves or collar can peek out around the garment. A plain, fitted top works best. Meta Muse Image removes this limitation once connected.
+- **No generated folds.** Creases come from your own clothes via lighting transfer, not from simulated fabric.
+- **Front view only.** Turn to face the camera; the app tells you when you are turned.
+- **Cut-out limits.** White garments on white backgrounds, or stripes touching the garment edge, can be cut by the flood-fill segmenter. Use manual select, or Meta SAM once connected.
+
+## Tier B — Realistic Photo (Meta Muse Image, server-side generation, not yet connected)
 
 ### What it can do
 - Photorealistic try-on using Meta Muse Image

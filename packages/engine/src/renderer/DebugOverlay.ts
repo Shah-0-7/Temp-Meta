@@ -25,10 +25,12 @@ export class DebugOverlay {
   private _canvas: HTMLCanvasElement;
   private _ctx: CanvasRenderingContext2D;
   private _maskImageData: ImageData | null = null;
+  private _maskCanvas: HTMLCanvasElement | null = null;
+  private _maskCtx: CanvasRenderingContext2D | null = null;
 
   constructor() {
     this._canvas = document.createElement('canvas');
-    const ctx = this._canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = this._canvas.getContext('2d');
     if (!ctx) throw new Error('Failed to create 2D context for debug overlay');
     this._ctx = ctx;
   }
@@ -111,38 +113,52 @@ export class DebugOverlay {
     const w = this._canvas.width;
     const h = this._canvas.height;
 
-    // Create or reuse ImageData at canvas resolution
-    if (
-      !this._maskImageData ||
-      this._maskImageData.width !== w ||
-      this._maskImageData.height !== h
-    ) {
-      this._maskImageData = this._ctx.createImageData(w, h);
+    // Paint at mask resolution (256x256), then scale: ~65k pixels instead of ~920k.
+    if (!this._maskCanvas || this._maskCanvas.width !== mask.width || this._maskCanvas.height !== mask.height) {
+      this._maskCanvas = document.createElement('canvas');
+      this._maskCanvas.width = mask.width;
+      this._maskCanvas.height = mask.height;
+      this._maskCtx = this._maskCanvas.getContext('2d')!;
+      this._maskImageData = this._maskCtx.createImageData(mask.width, mask.height);
     }
-
-    const pixels = this._maskImageData.data;
-    const scaleX = mask.width / w;
-    const scaleY = mask.height / h;
-
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        // Map canvas pixel to mask pixel
-        const srcX = mirror
-          ? Math.min(Math.floor((w - 1 - x) * scaleX), mask.width - 1)
-          : Math.min(Math.floor(x * scaleX), mask.width - 1);
-        const srcY = Math.min(Math.floor(y * scaleY), mask.height - 1);
-        const classId = mask.data[srcY * mask.width + srcX];
-
-        const color = CLASS_COLORS[classId] ?? [0, 0, 0, 0];
-        const idx = (y * w + x) * 4;
-        pixels[idx] = color[0];
-        pixels[idx + 1] = color[1];
-        pixels[idx + 2] = color[2];
-        pixels[idx + 3] = color[3];
-      }
+    const pixels = this._maskImageData!.data;
+    const n = mask.width * mask.height;
+    for (let i = 0; i < n; i++) {
+      const color = CLASS_COLORS[mask.data[i]] ?? CLASS_COLORS[0];
+      const o = i * 4;
+      pixels[o] = color[0];
+      pixels[o + 1] = color[1];
+      pixels[o + 2] = color[2];
+      pixels[o + 3] = color[3];
     }
+    this._maskCtx!.putImageData(this._maskImageData!, 0, 0);
 
-    this._ctx.putImageData(this._maskImageData, 0, 0);
+    const ctx = this._ctx;
+    ctx.save();
+    if (mirror) {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(this._maskCanvas, 0, 0, w, h);
+    ctx.restore();
+  }
+
+  /** Garment pins (already in screen space, so no mirroring). */
+  drawControlPoints(points: ReadonlyArray<{ key: string; dstU: number; dstV: number; weight: number }>): void {
+    const ctx = this._ctx;
+    const w = this._canvas.width;
+    const h = this._canvas.height;
+    ctx.font = '12px sans-serif';
+    for (const p of points) {
+      const x = p.dstU * w;
+      const y = p.dstV * h;
+      ctx.fillStyle = `rgba(255, 80, 120, ${0.35 + 0.65 * Math.min(1, p.weight)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText(p.key, x + 9, y + 4);
+    }
   }
 
   /**
@@ -152,6 +168,7 @@ export class DebugOverlay {
     landmarks: Landmark[] | null,
     segmentation: SegmentationMask | null,
     mirror: boolean,
+    controlPoints?: ReadonlyArray<{ key: string; dstU: number; dstV: number; weight: number }>,
   ): void {
     this.clear();
 
@@ -161,6 +178,10 @@ export class DebugOverlay {
 
     if (landmarks) {
       this.drawPose(landmarks, mirror);
+    }
+
+    if (controlPoints) {
+      this.drawControlPoints(controlPoints);
     }
   }
 }

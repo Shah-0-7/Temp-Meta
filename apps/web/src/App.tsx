@@ -5,11 +5,17 @@ import { GarmentPanel } from './components/garment/GarmentPanel';
 import { useAppStore } from './stores/appStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useGarmentStore } from './stores/garmentStore';
+import { useCameraStore } from './stores/cameraStore';
+import { useRenderStore } from './stores/renderStore';
+import { useCamera } from './hooks/useCamera';
+import { useRealisticRender } from './hooks/useRealisticRender';
 
 export function App() {
   const { engineReady, error } = useAppStore();
   const { togglePerfHUD, toggleDebugOverlay, toggleSettings, settingsOpen } = useSettingsStore();
   const { toggleGarmentPanel, garmentPanelOpen, selectedGarment } = useGarmentStore();
+  const { toggleMirror } = useCamera();
+  const { render } = useRealisticRender();
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -26,7 +32,18 @@ export function App() {
         case 'g':
           toggleGarmentPanel();
           break;
+        case 'm':
+          toggleMirror();
+          break;
+        case ' ':
+          if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLSelectElement) break;
+          if (useCameraStore.getState().cameraState === 'active' && !useRenderStore.getState().open) {
+            e.preventDefault();
+            void render();
+          }
+          break;
         case 'escape':
+          if (useRenderStore.getState().open) useRenderStore.getState().close();
           if (settingsOpen) toggleSettings();
           if (garmentPanelOpen) toggleGarmentPanel();
           break;
@@ -35,7 +52,7 @@ export function App() {
 
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
-  }, [togglePerfHUD, toggleDebugOverlay, toggleSettings, toggleGarmentPanel, settingsOpen, garmentPanelOpen]);
+  }, [togglePerfHUD, toggleDebugOverlay, toggleSettings, toggleGarmentPanel, toggleMirror, render, settingsOpen, garmentPanelOpen]);
 
   return (
     <div className="flex flex-col h-full">
@@ -123,7 +140,8 @@ export function App() {
           <span><kbd className="px-1 py-0.5 rounded text-[10px] glass">G</kbd> Garment</span>
           <span><kbd className="px-1 py-0.5 rounded text-[10px] glass">P</kbd> Perf HUD</span>
           <span><kbd className="px-1 py-0.5 rounded text-[10px] glass">D</kbd> Debug</span>
-          <span>Tier A: Fast Preview</span>
+          <span><kbd className="px-1 py-0.5 rounded text-[10px] glass">Space</kbd> Realistic render</span>
+          <span>Live preview: on-device</span>
         </div>
       </footer>
     </div>

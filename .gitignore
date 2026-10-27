@@ -26,3 +26,7 @@ npm-debug.log*
 
 # Test
 coverage/
+
+# Local MediaPipe runtime + models (pnpm setup:assets)
+apps/web/public/mediapipe/
+apps/web/public/models/

@@ -7,6 +7,9 @@
  * Meta Model API implementation that is plugged in via the registry.
  */
 
+import type { Landmark, OcclusionMask } from '../tracking/types.js';
+import type { GarmentAnchors } from '../garment/anchors.js';
+
 // ---------------------------------------------------------------------------
 // Garment Type Registry
 // ---------------------------------------------------------------------------
@@ -79,6 +82,20 @@ export class RateLimitError extends Error {
     );
     this.name = 'RateLimitError';
     this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/**
+ * Thrown when a provider's safety system refuses the input (e.g. Muse Image
+ * `content_policy_violation`). Not retryable, and NOT a reason to silently fall
+ * back to a lower-quality provider: the user should be told why.
+ */
+export class ContentPolicyError extends Error {
+  constructor(providerName: string, detail?: string) {
+    super(
+      `Provider "${providerName}" declined this request for safety reasons.${detail ? ` ${detail}` : ''}`,
+    );
+    this.name = 'ContentPolicyError';
   }
 }
 
@@ -158,8 +175,27 @@ export interface GarmentNormalizer extends Provider {
 // ---------------------------------------------------------------------------
 
 export interface TryOnRequest {
-  /** Lossless PNG frame of the person */
+  /** Lossless PNG frame of the person (no garment overlay). */
   personFrame: Blob;
+  /**
+   * Optional Tier A composite (the live preview with the garment overlay).
+   * Real generators ignore it; the mock generator returns it so the whole
+   * Tier B flow is demonstrable without any API key.
+   */
+  compositeFrame?: Blob;
+  /**
+   * Pose data for the person frame, when the caller already has it (the live
+   * tracker). The local renderer needs landmarks; remote generators ignore this.
+   */
+  tracking?: {
+    /** 33 pose landmarks, or an empty array when there is no live data. */
+    landmarks: Landmark[];
+    occlusion?: OcclusionMask | null;
+    /** Was the live preview mirrored? The render matches it. */
+    mirror: boolean;
+    /** Anchors measured on the cut-out garment, if already computed. */
+    anchors?: GarmentAnchors | null;
+  };
   /** One or more garment reference images */
   garmentImages: Blob[];
   /** What kind of garment this is */

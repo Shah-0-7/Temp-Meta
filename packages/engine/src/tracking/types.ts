@@ -38,11 +38,51 @@ export interface SegmentationMask {
   timestamp: number;
 }
 
+/**
+ * Single-channel mask (0..255) of body parts that must stay IN FRONT of the
+ * garment: face, hair and hands. Same orientation as the camera image
+ * (NOT mirrored); the renderer applies the mirror.
+ */
+export interface OcclusionMask {
+  data: Uint8Array;
+  width: number;
+  height: number;
+}
+
+/** What the user should do for the best fit. */
+export type PoseStatusCode =
+  | 'ok'
+  | 'no-person'
+  | 'show-shoulders'
+  | 'show-hips'
+  | 'move-back'
+  | 'move-closer'
+  | 'face-camera';
+
+export interface PoseStatus {
+  code: PoseStatusCode;
+  /** Short, user-facing guidance. Empty when `code === 'ok'`. */
+  message: string;
+  /** True when a garment can be drawn with good accuracy. */
+  ok: boolean;
+  /** Shoulder width as a fraction of frame height (aspect-corrected). 0 if unknown. */
+  shoulderWidth: number;
+  /** Mean visibility of shoulders + hips, 0..1. */
+  confidence: number;
+}
+
 /** Combined tracking result emitted per inference. */
 export interface TrackingResult {
   pose: PoseLandmarks | null;
   segmentation: SegmentationMask | null;
   inferenceTimeMs: number;
+  /** Parts that occlude the garment (face, hair, hands). Present when segmentation ran. */
+  occlusion?: OcclusionMask | null;
+  /** Fit guidance derived from the pose. Always present from TrackingPipeline. */
+  status?: PoseStatus;
+  /** Image size the landmarks refer to (video size at inference time). */
+  frameWidth?: number;
+  frameHeight?: number;
 }
 
 /** MediaPipe PoseLandmarker indices for key body points. */

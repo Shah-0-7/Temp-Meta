@@ -6,6 +6,7 @@
  */
 
 import { create } from 'zustand';
+import type { PoseStatus } from '@tryanywhere/engine';
 
 export interface AppState {
   /** Whether the engine has completed initialization */
@@ -16,12 +17,21 @@ export interface AppState {
   activeTier: 'a' | 'b' | 'c';
   /** Whether the debug overlay is visible */
   debugOverlay: boolean;
+  /** Latest fit guidance from the tracker (null until tracking runs) */
+  poseStatus: PoseStatus | null;
+  /** Where the tracking models came from, for the HUD/diagnostics */
+  trackingSource: 'local' | 'cdn' | null;
+  /** Set when tracking could not start; the camera preview still works */
+  trackingError: string | null;
 
   // Actions
   setEngineReady: (ready: boolean) => void;
   setError: (error: string | null) => void;
   setActiveTier: (tier: 'a' | 'b' | 'c') => void;
   toggleDebugOverlay: () => void;
+  setPoseStatus: (s: PoseStatus | null) => void;
+  setTrackingSource: (s: 'local' | 'cdn' | null) => void;
+  setTrackingError: (e: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -29,9 +39,15 @@ export const useAppStore = create<AppState>((set) => ({
   error: null,
   activeTier: 'a',
   debugOverlay: false,
+  poseStatus: null,
+  trackingSource: null,
+  trackingError: null,
 
   setEngineReady: (ready) => set({ engineReady: ready }),
   setError: (error) => set({ error }),
   setActiveTier: (tier) => set({ activeTier: tier }),
   toggleDebugOverlay: () => set((s) => ({ debugOverlay: !s.debugOverlay })),
+  setPoseStatus: (poseStatus) => set({ poseStatus }),
+  setTrackingSource: (trackingSource) => set({ trackingSource }),
+  setTrackingError: (trackingError) => set({ trackingError }),
 }));

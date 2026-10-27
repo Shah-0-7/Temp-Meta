@@ -1,63 +1,52 @@
 /**
  * @module renderer/WarpMesh
  *
- * Builds and updates the warped grid mesh used by the TierA renderer.
+ * Builds and updates the warped grid mesh drawn by the Tier A renderer.
  *
  * Algorithm:
- *   1. Start with an N×N regular grid of vertices in garment UV space
- *   2. For each vertex, compute displacement from each control point:
- *        weight = gaussian(distance(vertex.srcUV, cp.srcUV))
- *        displacement = cp.dstUV - cp.srcUV
- *        vertex.dstUV += weight * displacement
- *   3. Convert final dstUV to clip-space for the vertex buffer
- *   4. Upload to GPU
+ *   1. Start with an N x N regular grid over the garment image (UV space).
+ *   2. Move every vertex with Moving Least Squares (similarity) deformation
+ *      driven by the control points (see ./mls.ts). The maths runs in an isotropic
+ *      space, so garment-image and screen aspect ratios are taken into account.
+ *   3. Convert the result to clip space and upload.
  *
- * The result is a WebGL vertex buffer ready for WARP_VERT shader.
+ * The garment UV of each vertex stays fixed, so the texture is sampled
+ * undistorted; only the geometry moves.
  */
 
 import type { ControlPoint } from '../tracking/GarmentKeypoints.js';
 import { WARP_GRID_SIZE } from './shaders/warp.js';
+import { mlsSimilarity, type MlsPoint } from './mls.js';
 
-const N = WARP_GRID_SIZE;
-const VERTS_PER_SIDE = N + 1;
-const TOTAL_VERTS = VERTS_PER_SIDE * VERTS_PER_SIDE;
-
-// Each vertex: [posX, posY, uvX, uvY] = 4 floats
-const FLOATS_PER_VERT = 4;
-const TOTAL_FLOATS = TOTAL_VERTS * FLOATS_PER_VERT;
-
-/** Gaussian influence falloff. Sigma controls the spread of each control point. */
-function gaussianWeight(distSq: number, sigma: number): number {
-  return Math.exp(-distSq / (2 * sigma * sigma));
-}
+const FLOATS_PER_VERT = 4; // posX, posY, uvX, uvY
 
 export class WarpMesh {
-  private _vertexData: Float32Array;
-  private _indexData: Uint16Array;
-  private _vbo: WebGLBuffer;
-  private _ebo: WebGLBuffer;
-  private _vao: WebGLVertexArrayObject;
-  private _indexCount: number;
+  private readonly _n: number;
+  private readonly _vertexData: Float32Array;
+  private readonly _indexData: Uint16Array;
+  private readonly _vbo: WebGLBuffer;
+  private readonly _ebo: WebGLBuffer;
+  private readonly _vao: WebGLVertexArrayObject;
+  private readonly _indexCount: number;
 
-  // Attribute locations
-  private _aPosition: number;
-  private _aUV: number;
+  private _garmentAspect = 0.8;
+  private _screenAspect = 16 / 9;
 
   constructor(
-    private _gl: WebGL2RenderingContext,
+    private readonly _gl: WebGL2RenderingContext,
     program: WebGLProgram,
+    gridSize: number = WARP_GRID_SIZE,
   ) {
     const gl = _gl;
-
-    this._aPosition = gl.getAttribLocation(program, 'aPosition');
-    this._aUV = gl.getAttribLocation(program, 'aUV');
-
-    // Allocate CPU buffers
-    this._vertexData = new Float32Array(TOTAL_FLOATS);
-    this._indexData = buildIndexBuffer();
+    this._n = Math.max(2, Math.min(60, Math.floor(gridSize)));
+    const vertsPerSide = this._n + 1;
+    this._vertexData = new Float32Array(vertsPerSide * vertsPerSide * FLOATS_PER_VERT);
+    this._indexData = buildIndexBuffer(this._n);
     this._indexCount = this._indexData.length;
 
-    // Create GPU buffers
+    const aPosition = gl.getAttribLocation(program, 'aPosition');
+    const aUV = gl.getAttribLocation(program, 'aUV');
+
     this._vao = gl.createVertexArray()!;
     gl.bindVertexArray(this._vao);
 
@@ -69,98 +58,88 @@ export class WarpMesh {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._ebo);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
 
-    // Attributes: stride = 4 floats × 4 bytes = 16 bytes
     const stride = FLOATS_PER_VERT * 4;
-    gl.enableVertexAttribArray(this._aPosition);
-    gl.vertexAttribPointer(this._aPosition, 2, gl.FLOAT, false, stride, 0);
-    gl.enableVertexAttribArray(this._aUV);
-    gl.vertexAttribPointer(this._aUV, 2, gl.FLOAT, false, stride, 2 * 4);
+    gl.enableVertexAttribArray(aPosition);
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, stride, 0);
+    gl.enableVertexAttribArray(aUV);
+    gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, stride, 2 * 4);
 
     gl.bindVertexArray(null);
 
-    // Initialize with identity (no warp)
     this.updateIdentity();
   }
 
-  /**
-   * Build identity grid (garment fills a rect centered on screen).
-   * Used before any control points arrive.
-   */
-  updateIdentity(
-    /** Garment rect in clip space: [x0, y0, x1, y1] defaults to fullscreen */
-    rect: [number, number, number, number] = [-0.5, -0.7, 0.5, 0.7],
-  ): void {
-    const [x0, y0, x1, y1] = rect;
+  get gridSize(): number {
+    return this._n;
+  }
 
-    let vi = 0;
-    for (let row = 0; row <= N; row++) {
-      for (let col = 0; col <= N; col++) {
-        const u = col / N;
-        const v = row / N;
-        this._vertexData[vi++] = x0 + u * (x1 - x0); // posX
-        this._vertexData[vi++] = y1 - v * (y1 - y0); // posY (flip Y for clip)
-        this._vertexData[vi++] = u;                    // uvX
-        this._vertexData[vi++] = v;                    // uvY
-      }
-    }
-    this._uploadVertices();
+  /** Aspect ratios (width / height) of the garment image and of the output canvas. */
+  setAspects(garmentAspect: number, screenAspect: number): void {
+    if (garmentAspect > 0) this._garmentAspect = garmentAspect;
+    if (screenAspect > 0) this._screenAspect = screenAspect;
   }
 
   /**
-   * Warp the grid using control points.
-   * @param controlPoints  src→dst UV mappings from GarmentKeypoints
-   * @param sigma  Gaussian spread (0.15 works well for a 16-point grid)
+   * Build the un-warped grid (garment drawn as a rect centred on screen).
+   * Used before any control points arrive.
+   * @param rect clip-space [x0, y0, x1, y1]
    */
-  update(controlPoints: ControlPoint[], sigma = 0.15): void {
+  updateIdentity(rect: [number, number, number, number] = [-0.4, -0.75, 0.4, 0.75]): void {
+    const [x0, y0, x1, y1] = rect;
+    const n = this._n;
+    let vi = 0;
+    for (let row = 0; row <= n; row++) {
+      for (let col = 0; col <= n; col++) {
+        const u = col / n;
+        const v = row / n;
+        this._vertexData[vi++] = x0 + u * (x1 - x0);
+        this._vertexData[vi++] = y1 - v * (y1 - y0);
+        this._vertexData[vi++] = u;
+        this._vertexData[vi++] = v;
+      }
+    }
+    this._upload();
+  }
+
+  /**
+   * Warp the grid with the control points.
+   * @param alpha MLS falloff exponent (1.0 global/smooth .. 2.0 local). Default 1.2.
+   */
+  update(controlPoints: readonly ControlPoint[], alpha = 1.2): void {
     if (controlPoints.length === 0) {
       this.updateIdentity();
       return;
     }
 
+    const gA = this._garmentAspect;
+    const sA = this._screenAspect;
+    const pts: MlsPoint[] = controlPoints.map((c) => ({
+      px: c.srcU * gA,
+      py: c.srcV,
+      qx: c.dstU * sA,
+      qy: c.dstV,
+      w: c.weight,
+    }));
+
+    const n = this._n;
     let vi = 0;
-    for (let row = 0; row <= N; row++) {
-      for (let col = 0; col <= N; col++) {
-        const srcU = col / N;
-        const srcV = row / N;
-
-        // Compute weighted displacement from all control points
-        let dispU = 0;
-        let dispV = 0;
-        let totalWeight = 0;
-
-        for (const cp of controlPoints) {
-          const du = srcU - cp.srcU;
-          const dv = srcV - cp.srcV;
-          const distSq = du * du + dv * dv;
-          const w = gaussianWeight(distSq, sigma) * cp.weight;
-          dispU += w * (cp.dstU - cp.srcU);
-          dispV += w * (cp.dstV - cp.srcV);
-          totalWeight += w;
-        }
-
-        if (totalWeight > 1e-6) {
-          dispU /= totalWeight;
-          dispV /= totalWeight;
-        }
-
-        const dstU = Math.max(0, Math.min(1, srcU + dispU));
-        const dstV = Math.max(0, Math.min(1, srcV + dispV));
-
-        // Convert UV [0,1]² to clip space [-1,1]²
-        const posX = dstU * 2 - 1;
-        const posY = 1 - dstV * 2; // Flip Y
-
-        this._vertexData[vi++] = posX;
-        this._vertexData[vi++] = posY;
-        this._vertexData[vi++] = srcU;
-        this._vertexData[vi++] = srcV;
+    for (let row = 0; row <= n; row++) {
+      for (let col = 0; col <= n; col++) {
+        const u = col / n;
+        const v = row / n;
+        const [fx, fy] = mlsSimilarity(pts, u * gA, v, alpha);
+        const dstU = fx / sA;
+        const dstV = fy;
+        // UV [0,1] -> clip space. No clamping: parts of the garment may leave the frame.
+        this._vertexData[vi++] = dstU * 2 - 1;
+        this._vertexData[vi++] = 1 - dstV * 2;
+        this._vertexData[vi++] = u;
+        this._vertexData[vi++] = v;
       }
     }
-
-    this._uploadVertices();
+    this._upload();
   }
 
-  /** Bind VAO and draw the mesh. */
   draw(): void {
     const gl = this._gl;
     gl.bindVertexArray(this._vao);
@@ -175,26 +154,27 @@ export class WarpMesh {
     gl.deleteVertexArray(this._vao);
   }
 
-  private _uploadVertices(): void {
+  private _upload(): void {
     const gl = this._gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this._vbo);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._vertexData);
   }
 }
 
-/** Build a triangle index buffer for an N×N quad grid. */
-function buildIndexBuffer(): Uint16Array {
-  const indices: number[] = [];
-  for (let row = 0; row < N; row++) {
-    for (let col = 0; col < N; col++) {
-      const tl = row * VERTS_PER_SIDE + col;
+/** Triangle index buffer for an n x n quad grid. */
+function buildIndexBuffer(n: number): Uint16Array {
+  const vps = n + 1;
+  const indices = new Uint16Array(n * n * 6);
+  let k = 0;
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      const tl = row * vps + col;
       const tr = tl + 1;
-      const bl = tl + VERTS_PER_SIDE;
+      const bl = tl + vps;
       const br = bl + 1;
-      // Two triangles per quad
-      indices.push(tl, bl, tr);
-      indices.push(tr, bl, br);
+      indices[k++] = tl; indices[k++] = bl; indices[k++] = tr;
+      indices[k++] = tr; indices[k++] = bl; indices[k++] = br;
     }
   }
-  return new Uint16Array(indices);
+  return indices;
 }

@@ -1,12 +1,15 @@
 /**
  * @module hooks/useEngine
  *
- * React hook that manages the full WebGL render pipeline.
- * M1: PassthroughRenderer (camera-only)
- * M4: TierARenderer (camera + garment warp overlay)
+ * Owns the WebGL renderer and connects it to three inputs:
+ *   - camera frames        -> draw()
+ *   - the selected garment -> cut-out + anchors -> texture
+ *   - tracking results     -> control points + occlusion mask
  *
- * Upgrades to TierARenderer automatically when a garment is selected.
- * Falls back to PassthroughRenderer on WebGL2 unavailability.
+ * All values the tracking callback needs (garment, mirror, ...) live in refs, so
+ * the callback is STABLE. (The previous version re-created it on every garment or
+ * mirror change while the tracker kept calling the first copy, which still saw
+ * "no garment selected".)
  */
 
 import { useRef, useEffect, useCallback } from 'react';
@@ -15,40 +18,64 @@ import {
   TierARenderer,
   PerfMonitor,
   deriveControlPoints,
+  prepareGarmentImage,
+  type PreparedGarment,
+  type TrackingResult,
 } from '@tryanywhere/engine';
-import type { TrackingResult } from '@tryanywhere/engine';
 import { getCameraManager } from './useCamera';
 import { useCameraStore } from '../stores/cameraStore';
 import { useAppStore } from '../stores/appStore';
 import { useGarmentStore } from '../stores/garmentStore';
+import { useSettingsStore } from '../stores/settingsStore';
+
+/** Shared with the snapshot / realistic-render flow. */
+export interface EngineHandle {
+  renderer: TierARenderer | null;
+  ctx: WebGLContext | null;
+  garment: PreparedGarment | null;
+  garmentType: 'top' | 'outerwear';
+  latest: TrackingResult | null;
+}
+export const engineHandle: EngineHandle = {
+  renderer: null,
+  ctx: null,
+  garment: null,
+  garmentType: 'top',
+  latest: null,
+};
 
 export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
-  const ctxRef = useRef<WebGLContext | null>(null);
-  const rendererRef = useRef<TierARenderer | null>(null);
   const perfRef = useRef<PerfMonitor>(new PerfMonitor());
-  const cleanupRef = useRef<(() => void) | null>(null);
-  const garmentImageRef = useRef<HTMLImageElement | null>(null);
 
   const cameraState = useCameraStore((s) => s.cameraState);
   const mirror = useCameraStore((s) => s.mirror);
+  const selectedGarment = useGarmentStore((s) => s.selectedGarment);
+  const shading = useSettingsStore((s) => s.garmentShading);
   const setEngineReady = useAppStore((s) => s.setEngineReady);
   const setError = useAppStore((s) => s.setError);
-  const selectedGarment = useGarmentStore((s) => s.selectedGarment);
 
-  // Initialize WebGL when canvas is available
-  const initWebGL = useCallback(() => {
+  const mirrorRef = useRef(mirror);
+  mirrorRef.current = mirror;
+
+  // ---- WebGL lifetime ------------------------------------------------------------
+
+  const createRenderer = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || ctxRef.current) return;
-
+    if (!canvas) return;
     try {
+      engineHandle.ctx?.dispose();
       const ctx = new WebGLContext({ canvas, preserveDrawingBuffer: true });
-      ctxRef.current = ctx;
+      const renderer = new TierARenderer(ctx, { shading: useSettingsStore.getState().garmentShading });
+      renderer.mirror = mirrorRef.current;
+      if (engineHandle.garment) renderer.setGarment(engineHandle.garment.canvas);
+      engineHandle.ctx = ctx;
+      engineHandle.renderer = renderer;
 
-      const renderer = new TierARenderer(ctx);
-      rendererRef.current = renderer;
+      // Textures die with the context: rebuild everything on restore.
+      ctx.onContextRestored(() => createRenderer());
 
       setEngineReady(true);
-      console.log('[useEngine] TierA WebGL2 renderer initialized');
+      setError(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'WebGL2 initialization failed';
       setError(msg);
@@ -56,130 +83,126 @@ export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
     }
   }, [canvasRef, setEngineReady, setError]);
 
-  // Wire camera frames to the renderer
+  useEffect(() => {
+    createRenderer();
+    return () => {
+      engineHandle.renderer?.dispose();
+      engineHandle.ctx?.dispose();
+      engineHandle.renderer = null;
+      engineHandle.ctx = null;
+    };
+  }, [createRenderer]);
+
+  // ---- Camera frames -> render ------------------------------------------------------
+
   useEffect(() => {
     if (cameraState !== 'active') return;
-
     const mgr = getCameraManager();
-    const renderer = rendererRef.current;
-    const ctx = ctxRef.current;
     const perf = perfRef.current;
-    if (!mgr || !renderer || !ctx) return;
 
-    // Size canvas to match video
-    const video = mgr.video;
-    if (video) ctx.resize(video.videoWidth, video.videoHeight);
-
-    const unsubFrame = mgr.onFrame((videoEl, _timestamp) => {
+    return mgr.onFrame((video) => {
+      const { renderer, ctx } = engineHandle;
+      if (!renderer || !ctx || video.videoWidth === 0) return;
       const endFrame = perf.beginFrame();
-
-      if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
-        ctx.resize(videoEl.videoWidth, videoEl.videoHeight);
-      }
-
-      renderer.draw(videoEl);
+      // Exact video size, no CSS side effects: the canvas keeps the camera's aspect ratio.
+      ctx.setDrawingBufferSize(video.videoWidth, video.videoHeight);
+      renderer.draw(video);
       endFrame();
     });
-
-    cleanupRef.current = unsubFrame;
-    return () => {
-      unsubFrame();
-      cleanupRef.current = null;
-    };
   }, [cameraState]);
 
-  // Update mirror
+  // ---- Settings -----------------------------------------------------------------------
+
   useEffect(() => {
-    if (rendererRef.current) rendererRef.current.mirror = mirror;
+    if (engineHandle.renderer) engineHandle.renderer.mirror = mirror;
   }, [mirror]);
 
-  // Load garment image when selection changes
   useEffect(() => {
-    const renderer = rendererRef.current;
+    if (engineHandle.renderer) engineHandle.renderer.shading = shading;
+  }, [shading]);
+
+  // ---- Garment: load -> cut out -> texture -----------------------------------------------
+
+  useEffect(() => {
+    const renderer = engineHandle.renderer;
+    const { setPrep } = useGarmentStore.getState();
     if (!renderer) return;
 
     if (!selectedGarment) {
       renderer.clearGarment();
-      garmentImageRef.current = null;
+      engineHandle.garment = null;
+      setPrep(null);
       return;
     }
 
-    const displayUrl = selectedGarment.proxyUrl ?? selectedGarment.url;
+    const type = (selectedGarment as { garmentType?: string }).garmentType;
+    engineHandle.garmentType = type === 'outerwear' ? 'outerwear' : 'top';
+
+    let cancelled = false;
+    const url = selectedGarment.proxyUrl ?? selectedGarment.url;
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      renderer.setGarment(img);
-      garmentImageRef.current = img;
-      console.log('[useEngine] Garment loaded:', displayUrl);
+      if (cancelled) return;
+      try {
+        const prepared = prepareGarmentImage(img);
+        engineHandle.garment = prepared;
+        engineHandle.renderer?.setGarment(prepared.canvas);
+        setPrep({ mode: prepared.mode, confidence: prepared.confidence, loadError: null });
+        console.log(
+          `[useEngine] Garment ready: cut-out=${prepared.mode}, confidence=${prepared.confidence.toFixed(2)}`,
+        );
+      } catch (err) {
+        // Typically a cross-origin image without CORS headers (tainted canvas).
+        console.warn('[useEngine] Could not prepare garment:', err);
+        setPrep({
+          mode: 'none',
+          confidence: 0,
+          loadError:
+            'This image cannot be read by the browser (the store blocks it). Use the product URL option, which loads it through the app server, or upload the image.',
+        });
+      }
     };
     img.onerror = () => {
-      console.warn('[useEngine] Failed to load garment image:', displayUrl);
+      if (cancelled) return;
+      setPrep({ mode: 'none', confidence: 0, loadError: 'The garment image failed to load.' });
     };
-    img.src = displayUrl;
-  }, [selectedGarment]);
+    img.src = url;
 
-  // Accept tracking results and derive control points
-  const onTrackingResult = useCallback((result: TrackingResult) => {
-    const renderer = rendererRef.current;
-    if (!renderer || !selectedGarment || !result.pose) return;
-
-    // Derive garment type from the store candidate
-    const garmentType = (selectedGarment as any).garmentType ?? 'top';
-    const cps = deriveControlPoints(result.pose.landmarks, garmentType, mirror);
-    renderer.setControlPoints(cps);
-
-    // Forward segmentation mask if available
-    if (result.segmentation) {
-      // Build a canvas from the segmentation mask (clothes class only)
-      buildMaskCanvas(result.segmentation.data, result.segmentation.width, result.segmentation.height)
-        .then((canvas) => renderer.setMaskTexture(canvas))
-        .catch(() => {});
-    }
-  }, [selectedGarment, mirror]);
-
-  // Cleanup
-  useEffect(() => {
     return () => {
-      cleanupRef.current?.();
-      rendererRef.current?.dispose();
-      ctxRef.current?.dispose();
-      rendererRef.current = null;
-      ctxRef.current = null;
+      cancelled = true;
     };
+  }, [selectedGarment, canvasRef]);
+
+  // ---- Tracking results -> control points (stable callback) ------------------------------
+
+  const onTrackingResult = useCallback((result: TrackingResult) => {
+    engineHandle.latest = result;
+
+    // Low-frequency UI state: only when the guidance changes.
+    if (result.status) {
+      const prev = useAppStore.getState().poseStatus;
+      if (!prev || prev.code !== result.status.code) useAppStore.getState().setPoseStatus(result.status);
+    }
+
+    const renderer = engineHandle.renderer;
+    const garment = engineHandle.garment;
+    if (!renderer || !garment || !result.pose) return;
+
+    const aspect =
+      result.frameWidth && result.frameHeight ? result.frameWidth / result.frameHeight : 16 / 9;
+    const cps = deriveControlPoints(result.pose.landmarks, engineHandle.garmentType, {
+      mirror: mirrorRef.current,
+      aspect,
+      garmentAspect: garment.aspect,
+      anchors: garment.anchors,
+    });
+    renderer.setControlPoints(cps);
+    renderer.setOcclusionMask(result.occlusion ?? null);
   }, []);
 
   return {
-    initWebGL,
     perf: perfRef.current,
-    glContext: ctxRef.current,
-    renderer: rendererRef.current,
     onTrackingResult,
   };
-}
-
-/**
- * Build an OffscreenCanvas from the segmentation mask, encoding
- * the "clothes" class (4) as white and everything else as black.
- */
-async function buildMaskCanvas(
-  data: Uint8Array,
-  width: number,
-  height: number,
-): Promise<OffscreenCanvas> {
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d')!;
-  const imgData = ctx.createImageData(width, height);
-  const pixels = imgData.data;
-
-  for (let i = 0; i < data.length; i++) {
-    const isClothes = data[i] === 4; // SegmentationClass.Clothes
-    const v = isClothes ? 255 : 0;
-    pixels[i * 4] = v;
-    pixels[i * 4 + 1] = v;
-    pixels[i * 4 + 2] = v;
-    pixels[i * 4 + 3] = 255;
-  }
-
-  ctx.putImageData(imgData, 0, 0);
-  return canvas;
 }

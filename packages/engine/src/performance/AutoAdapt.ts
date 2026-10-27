@@ -166,6 +166,7 @@ export class AutoAdapt {
     // Apply to tracking pipeline
     if (this._trackingPipeline) {
       this._trackingPipeline.setTrackingRate(step.trackingRate);
+      this._trackingPipeline.setSegmentationEnabled(step.enableSegmentation);
     }
 
     console.log(

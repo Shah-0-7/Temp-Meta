@@ -1,9 +1,12 @@
 /**
  * @module hooks/useTracking
  *
- * React hook that manages the TrackingPipeline lifecycle.
- * Initializes MediaPipe models, starts/stops tracking when
- * camera is active, and provides latest results to the UI.
+ * Manages the TrackingPipeline: loads the pose + segmentation models (same-origin
+ * files when present, CDN otherwise), runs them on the live camera, feeds the
+ * renderer, and draws the optional debug overlay.
+ *
+ * Tracking failures never kill the camera preview: the user still sees themselves,
+ * with a clear message about what is wrong.
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -12,148 +15,178 @@ import {
   DebugOverlay,
   AutoAdapt,
   PerfMonitor,
+  resolveVisionAssets,
 } from '@tryanywhere/engine';
 import type { TrackingResult } from '@tryanywhere/engine';
 import { getCameraManager } from './useCamera';
+import { engineHandle } from './useEngine';
 import { useCameraStore } from '../stores/cameraStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useAppStore } from '../stores/appStore';
 
 export function useTracking(
   perfMonitor: PerfMonitor,
-  onResult?: (result: TrackingResult) => void,
+  onResult: (result: TrackingResult) => void,
 ) {
   const pipelineRef = useRef<TrackingPipeline | null>(null);
+  const initPromiseRef = useRef<Promise<void> | null>(null);
   const debugOverlayRef = useRef<DebugOverlay | null>(null);
   const autoAdaptRef = useRef<AutoAdapt | null>(null);
   const [trackingReady, setTrackingReady] = useState(false);
-  const [latestResult, setLatestResult] = useState<TrackingResult | null>(null);
-  const [initProgress, setInitProgress] = useState<string>('');
+  const [initProgress, setInitProgress] = useState('');
+
+  // Latest values for callbacks that outlive a render.
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
+  const mirror = useCameraStore((s) => s.mirror);
+  const mirrorRef = useRef(mirror);
+  mirrorRef.current = mirror;
+  const showDebug = useSettingsStore((s) => s.showDebugOverlay);
+  const showDebugRef = useRef(showDebug);
+  showDebugRef.current = showDebug;
 
   const cameraState = useCameraStore((s) => s.cameraState);
-  const mirror = useCameraStore((s) => s.mirror);
   const trackingRate = useSettingsStore((s) => s.trackingRate);
   const autoAdaptEnabled = useSettingsStore((s) => s.autoAdapt);
-  const showDebugOverlay = useSettingsStore((s) => s.showDebugOverlay);
-  const setEngineReady = useAppStore((s) => s.setEngineReady);
+  const poseModel = useSettingsStore((s) => s.poseModel);
 
-  // Initialize tracking pipeline
-  const initTracking = useCallback(async () => {
-    if (pipelineRef.current) return;
+  if (!debugOverlayRef.current && typeof document !== 'undefined') {
+    debugOverlayRef.current = new DebugOverlay();
+  }
 
-    try {
-      setInitProgress('Loading pose model…');
-      const pipeline = new TrackingPipeline({
-        trackingRate,
-        enablePose: true,
-        enableSegmentation: true,
-        filterConfig: {
-          minCutoff: 0.8,
-          beta: 0.01,
-          dCutoff: 1.0,
-        },
-      });
+  const disposePipeline = useCallback(async () => {
+    autoAdaptRef.current?.stop();
+    autoAdaptRef.current = null;
+    const p = pipelineRef.current;
+    pipelineRef.current = null;
+    initPromiseRef.current = null;
+    setTrackingReady(false);
+    await p?.dispose();
+  }, []);
 
-      pipelineRef.current = pipeline;
+  /** Load models and build the pipeline. Safe to call repeatedly. */
+  const initTracking = useCallback((): Promise<void> => {
+    if (initPromiseRef.current) return initPromiseRef.current;
 
-      // Create debug overlay
-      debugOverlayRef.current = new DebugOverlay();
+    const run = async () => {
+      const app = useAppStore.getState();
+      app.setTrackingError(null);
+      try {
+        setInitProgress('Looking for body-tracking models…');
+        const settings = useSettingsStore.getState();
+        const { assets, source } = await resolveVisionAssets({
+          variant: settings.poseModel,
+          localBase: import.meta.env.BASE_URL,
+        });
+        app.setTrackingSource(source);
 
-      // Create auto-adapt
-      const autoAdapt = new AutoAdapt(perfMonitor);
-      autoAdapt.setTrackingPipeline(pipeline);
-      autoAdaptRef.current = autoAdapt;
+        setInitProgress(
+          source === 'local' ? 'Loading body tracking…' : 'Downloading body-tracking models (first run)…',
+        );
+        const pipeline = new TrackingPipeline({
+          trackingRate: settings.trackingRate,
+          enablePose: true,
+          enableSegmentation: true,
+          poseOptions: { variant: settings.poseModel, wasmBase: assets.wasmBase, modelUrl: assets.poseModel },
+          segmenterOptions: { wasmBase: assets.wasmBase, modelUrl: assets.segmenterModel },
+        });
+        await pipeline.initialize();
 
-      setInitProgress('Initializing MediaPipe…');
-      await pipeline.initialize();
+        pipeline.onResult((result) => {
+          perfMonitor.recordTrackingTime(result.inferenceTimeMs);
+          perfMonitor.setGpuDelegateAvailable(pipeline.gpuDelegateActive);
+          onResultRef.current(result);
 
-      // Subscribe to results
-      pipeline.onResult((result) => {
-        setLatestResult(result);
-        perfMonitor.recordTrackingTime(result.inferenceTimeMs);
-        perfMonitor.setGpuDelegateAvailable(pipeline.gpuDelegateActive);
-        // Forward to engine for control point derivation
-        onResult?.(result);
-      });
+          if (showDebugRef.current) {
+            const overlay = debugOverlayRef.current;
+            const video = getCameraManager().video;
+            if (overlay && video) {
+              overlay.resize(video.videoWidth, video.videoHeight);
+              overlay.draw(
+                result.pose?.landmarks ?? null,
+                result.segmentation ?? null,
+                mirrorRef.current,
+                engineHandle.renderer?.controlPoints,
+              );
+            }
+          }
+        });
 
-      setTrackingReady(true);
-      setEngineReady(true);
-      setInitProgress('');
-      console.log('[useTracking] Pipeline ready');
-    } catch (err) {
-      console.error('[useTracking] Failed to initialize:', err);
-      setInitProgress('Tracking initialization failed');
-    }
-  }, [trackingRate, perfMonitor, setEngineReady]);
+        const autoAdapt = new AutoAdapt(perfMonitor);
+        autoAdapt.setTrackingPipeline(pipeline);
+        autoAdaptRef.current = autoAdapt;
 
-  // Start/stop tracking when camera changes
+        pipelineRef.current = pipeline;
+        setTrackingReady(true);
+        useAppStore.getState().setEngineReady(true);
+        setInitProgress('');
+      } catch (err) {
+        console.error('[useTracking] Failed to initialize:', err);
+        initPromiseRef.current = null;
+        setInitProgress('');
+        useAppStore
+          .getState()
+          .setTrackingError(
+            'Body tracking could not start. The camera works, but garments will not follow you. ' +
+              'Check your internet connection (models download on first use) or run "pnpm setup:assets" to bundle them locally.',
+          );
+      }
+    };
+
+    initPromiseRef.current = run();
+    return initPromiseRef.current;
+  }, [perfMonitor]);
+
+  // Start/stop tracking with the camera.
   useEffect(() => {
     if (cameraState !== 'active' || !trackingReady) return;
-
-    const mgr = getCameraManager();
+    const video = getCameraManager().video;
     const pipeline = pipelineRef.current;
-    if (!mgr?.video || !pipeline) return;
+    if (!video || !pipeline) return;
 
-    pipeline.startTracking(mgr.video);
-
-    // Start auto-adapt if enabled
-    if (autoAdaptEnabled && autoAdaptRef.current) {
-      autoAdaptRef.current.enabled = true;
-      autoAdaptRef.current.start();
+    pipeline.startTracking(video);
+    const adapt = autoAdaptRef.current;
+    if (adapt && autoAdaptEnabled) {
+      adapt.enabled = true;
+      adapt.start();
     }
-
     return () => {
       pipeline.stopTracking();
-      autoAdaptRef.current?.stop();
+      adapt?.stop();
+      useAppStore.getState().setPoseStatus(null);
     };
   }, [cameraState, trackingReady, autoAdaptEnabled]);
 
-  // Update tracking rate
   useEffect(() => {
     pipelineRef.current?.setTrackingRate(trackingRate);
   }, [trackingRate]);
 
-  // Update auto-adapt
+  // Changing the body model rebuilds the pipeline (only once tracking was started before).
+  const firstModelRun = useRef(true);
   useEffect(() => {
-    if (autoAdaptRef.current) {
-      autoAdaptRef.current.enabled = autoAdaptEnabled;
+    if (firstModelRun.current) {
+      firstModelRun.current = false;
+      return;
     }
-  }, [autoAdaptEnabled]);
+    if (!pipelineRef.current) return;
+    void disposePipeline().then(() => initTracking());
+  }, [poseModel, disposePipeline, initTracking]);
 
-  // Draw debug overlay
+  // Clear the overlay when it is switched off.
   useEffect(() => {
-    if (!showDebugOverlay || !latestResult) return;
+    if (!showDebug) debugOverlayRef.current?.clear();
+  }, [showDebug]);
 
-    const overlay = debugOverlayRef.current;
-    if (!overlay) return;
-
-    const mgr = getCameraManager();
-    if (!mgr?.video) return;
-
-    overlay.resize(mgr.video.videoWidth, mgr.video.videoHeight);
-    overlay.draw(
-      latestResult.pose?.landmarks ?? null,
-      latestResult.segmentation ?? null,
-      mirror,
-    );
-  }, [showDebugOverlay, latestResult, mirror]);
-
-  // Cleanup
   useEffect(() => {
     return () => {
-      pipelineRef.current?.dispose();
-      pipelineRef.current = null;
-      autoAdaptRef.current?.stop();
+      void disposePipeline();
     };
-  }, []);
+  }, [disposePipeline]);
 
   return {
     initTracking,
     trackingReady,
-    latestResult,
     initProgress,
     debugOverlay: debugOverlayRef.current,
-    pipeline: pipelineRef.current,
-    autoAdapt: autoAdaptRef.current,
   };
 }

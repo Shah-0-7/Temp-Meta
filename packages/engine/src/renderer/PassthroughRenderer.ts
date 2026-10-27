@@ -49,17 +49,23 @@ export class PassthroughRenderer {
     return this._mirror;
   }
 
+  /** The camera-frame texture (valid after the first draw). Shared with later passes. */
+  get texture(): WebGLTexture {
+    return this._texture;
+  }
+
   /**
    * Draw a video frame to the canvas.
    * Call this once per render frame.
+   * @param mipmaps build the mip chain so later passes can read blurred versions of the frame
    */
-  draw(source: TexImageSource): void {
+  draw(source: TexImageSource, mipmaps = false): void {
     const { gl } = this._ctx;
 
     if (this._ctx.isContextLost) return;
 
     // Upload video frame to texture
-    this._ctx.updateTexture(this._texture, source);
+    this._ctx.updateTexture(this._texture, source, { mipmaps });
 
     // Clear and draw
     gl.clearColor(0, 0, 0, 1);

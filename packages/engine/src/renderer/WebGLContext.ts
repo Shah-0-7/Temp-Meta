@@ -13,6 +13,8 @@ export interface WebGLContextOptions {
   preserveDrawingBuffer?: boolean;
   /** Whether to request alpha channel. Default: true */
   alpha?: boolean;
+  /** MSAA on the default framebuffer. Smooth garment edges in stills; costs fill-rate live. Default: false */
+  antialias?: boolean;
 }
 
 export class WebGLContext {
@@ -31,7 +33,7 @@ export class WebGLContext {
       alpha: options.alpha ?? true,
       premultipliedAlpha: true,
       preserveDrawingBuffer: options.preserveDrawingBuffer ?? false,
-      antialias: false,
+      antialias: options.antialias ?? false,
       desynchronized: true, // lower latency on supported browsers
       powerPreference: 'high-performance',
     });
@@ -69,6 +71,24 @@ export class WebGLContext {
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
     this.gl.viewport(0, 0, drawWidth, drawHeight);
+    return true;
+  }
+
+  /**
+   * Set the drawing buffer to an exact pixel size WITHOUT touching CSS size.
+   * Use this for video-sized canvases: the browser then scales the canvas
+   * to fit its container with the aspect ratio preserved. (`resize()` writes
+   * explicit CSS width/height, which stretches the picture when the container
+   * is smaller than the video.)
+   * Returns true if the size changed.
+   */
+  setDrawingBufferSize(width: number, height: number): boolean {
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+    if (this.canvas.width === w && this.canvas.height === h) return false;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.gl.viewport(0, 0, w, h);
     return true;
   }
 
@@ -155,14 +175,51 @@ export class WebGLContext {
     return tex;
   }
 
-  /** Upload a video / image / canvas to a texture. */
+  /**
+   * Upload a video / image / canvas to a texture.
+   *
+   * - `premultiply`: upload with premultiplied alpha (use for cut-out garments so
+   *   linear filtering does not bleed the background colour into the edge).
+   * - `mipmaps`: build the mip chain and sample trilinearly (use for garments that
+   *   are drawn smaller than their source, and for the camera frame when the
+   *   shader reads blurred versions of it).
+   */
   updateTexture(
     texture: WebGLTexture,
     source: TexImageSource,
+    options: { premultiply?: boolean; mipmaps?: boolean; anisotropy?: number } = {},
   ): void {
     const { gl } = this;
     gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, options.premultiply === true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+
+    if (options.mipmaps) {
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      const aniso = options.anisotropy ?? 0;
+      if (aniso > 1) {
+        const ext = gl.getExtension('EXT_texture_filter_anisotropic');
+        if (ext) {
+          const max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number;
+          gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(aniso, max));
+        }
+      }
+    } else {
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
+  }
+
+  /** Upload a single-channel (R8) raster, e.g. the occlusion mask. */
+  updateMaskTexture(texture: WebGLTexture, data: Uint8Array, width: number, height: number): void {
+    const { gl } = this;
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, width, height, 0, gl.RED, gl.UNSIGNED_BYTE, data);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   }
 
   // ---- Context loss ---------------------------------------------------------

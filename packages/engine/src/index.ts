@@ -31,6 +31,7 @@ export {
   NotConfiguredError,
   ProviderTimeoutError,
   RateLimitError,
+  ContentPolicyError,
 } from './providers/types.js';
 
 // Provider registry
@@ -98,5 +99,57 @@ export { WarpMesh } from './renderer/WarpMesh.js';
 
 // Garment keypoints — M4
 export { deriveControlPoints, GARMENT_UV } from './tracking/GarmentKeypoints.js';
-export type { ControlPoint, GarmentType as WarpGarmentType } from './tracking/GarmentKeypoints.js';
+export type {
+  ControlPoint,
+  DeriveOptions,
+  GarmentType as WarpGarmentType,
+} from './tracking/GarmentKeypoints.js';
+export { pointAlongPath } from './tracking/GarmentKeypoints.js';
+
+// ---- Local render (no API key) -------------------------------------------------
+export { mlsSimilarity, fitSimilarity } from './renderer/mls.js';
+export type { MlsPoint } from './renderer/mls.js';
+export { OcclusionPass } from './renderer/OcclusionPass.js';
+export { evaluatePose, PoseStatusTracker } from './tracking/PoseQuality.js';
+export type { EvaluatePoseOptions } from './tracking/PoseQuality.js';
+export { buildOcclusionMask } from './tracking/occlusion.js';
+export type { OcclusionOptions } from './tracking/occlusion.js';
+export type { OcclusionMask, PoseStatus, PoseStatusCode } from './tracking/types.js';
+export { POSE_FILTER_DEFAULTS } from './tracking/TrackingPipeline.js';
+export {
+  MEDIAPIPE_VERSION,
+  cdnAssets,
+  localAssets,
+  resolveVisionAssets,
+} from './tracking/assets.js';
+export type { VisionAssets, PoseModelVariant, ResolvedAssets, ResolveAssetsOptions } from './tracking/assets.js';
+export { StillAnalyzer } from './tracking/StillAnalyzer.js';
+export type { StillAnalysis } from './tracking/StillAnalyzer.js';
+export { describeCameraError } from './camera/CameraManager.js';
+
+// Garment preparation (cut-out + anchors)
+export * from './garment/cutout.js';
+export { analyzeGarment, defaultAnchors, DEFAULT_TOP_ANCHORS } from './garment/anchors.js';
+export type { GarmentAnchors } from './garment/anchors.js';
+export {
+  prepareFromRgba,
+  prepareGarmentImage,
+  readPixels,
+  rgbaToCanvas,
+} from './garment/prepareGarment.js';
+export type { PrepareOptions, PreparedGarment, PreparedGarmentData, CutoutMode } from './garment/prepareGarment.js';
+export * from './mask/rle.js';
+
+// Providers: local implementations + app registry
+export { FloodFillSegmenter } from './providers/garment-segmenter/FloodFillSegmenter.js';
+export {
+  LocalTryOnGenerator,
+  NoPersonDetectedError,
+} from './providers/tryon-generator/LocalTryOnGenerator.js';
+export type {
+  LocalTryOnGeneratorOptions,
+  StillAnalyzerFn,
+} from './providers/tryon-generator/LocalTryOnGenerator.js';
+export { PoseModelUnavailableError } from './providers/tryon-generator/errors.js';
+export { createAppRegistry } from './providers/defaults.js';
 
