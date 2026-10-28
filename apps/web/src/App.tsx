@@ -10,6 +10,10 @@ import { useRenderStore } from './stores/renderStore';
 import { useSnapshotStore } from './stores/snapshotStore';
 import { GalleryPanel } from './components/gallery/GalleryPanel';
 import { HelpDialog } from './components/help/HelpDialog';
+import { ConsentDialog } from './components/consent/ConsentDialog';
+import { useRealtimeLifecycle, startRealtime, stopRealtime } from './hooks/useRealtimeTryOn';
+import { useRealtimeStore } from './stores/realtimeStore';
+import { useConsentStore } from './stores/consentStore';
 import { findShortcut } from './lib/shortcuts';
 import { useCamera } from './hooks/useCamera';
 import { useRealisticRender } from './hooks/useRealisticRender';
@@ -22,6 +26,7 @@ export function App() {
   const { toggleGarmentPanel, garmentPanelOpen, selectedGarment } = useGarmentStore();
   const { toggleMirror } = useCamera();
   const { render } = useRealisticRender();
+  useRealtimeLifecycle();
 
   // Keyboard shortcuts (the list lives in lib/shortcuts.ts, shared with the help dialog)
   useEffect(() => {
@@ -44,7 +49,8 @@ export function App() {
 
       // Esc closes the top-most layer first.
       if (shortcut.key === 'escape') {
-        if (app.helpOpen) app.setHelpOpen(false);
+        if (useConsentStore.getState().pending) useConsentStore.getState().answer(false);
+        else if (app.helpOpen) app.setHelpOpen(false);
         else if (gallery.open) gallery.setOpen(false);
         else if (rendering.open) rendering.close();
         else if (settingsOpen) toggleSettings();
@@ -53,7 +59,8 @@ export function App() {
       }
 
       // While a dialog is open, only Esc and ? act.
-      const dialogOpen = app.helpOpen || gallery.open || rendering.open;
+      const dialogOpen =
+        app.helpOpen || gallery.open || rendering.open || !!useConsentStore.getState().pending;
       if (dialogOpen && shortcut.key !== '?') return;
 
       switch (shortcut.key) {
@@ -69,6 +76,13 @@ export function App() {
         case 'v':
           gallery.toggleOpen();
           break;
+        case 'l': {
+          const live = useRealtimeStore.getState();
+          if (!live.available) break;
+          if (live.status === 'live' || live.status === 'starting') void stopRealtime();
+          else if (useCameraStore.getState().cameraState === 'active') void startRealtime();
+          break;
+        }
         case 'm':
           toggleMirror();
           break;
@@ -200,6 +214,7 @@ export function App() {
       </main>
 
       <HelpDialog />
+      <ConsentDialog />
 
       {/* Status bar */}
       <footer className="px-6 py-2 flex items-center justify-between text-xs text-[var(--color-text-muted)] border-t border-[var(--color-glass-border)]">

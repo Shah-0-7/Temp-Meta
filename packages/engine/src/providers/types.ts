@@ -232,11 +232,39 @@ export interface TryOnGenerator extends Provider {
 // RealtimeTryOn (Tier C — Live Realistic)
 // ---------------------------------------------------------------------------
 
+export type RealtimeState = 'connecting' | 'connected' | 'generating' | 'reconnecting' | 'disconnected';
+
+/** Normalised realtime failure. `code` is vendor-neutral. */
+export class RealtimeTryOnError extends Error {
+  constructor(
+    public readonly code: 'auth' | 'expired' | 'network' | 'invalid-input' | 'session-limit' | 'unknown',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'RealtimeTryOnError';
+  }
+}
+
+export interface RealtimeConnectOptions {
+  garmentType?: GarmentType;
+  /** Short text about the garment ("navy crew-neck t-shirt") to sharpen the prompt. */
+  description?: string;
+  /** Output resolution. Default 720p. */
+  resolution?: '720p' | '1080p';
+}
+
 export interface RealtimeSession {
   /** Swap garment without reconnecting. */
-  updateGarment(garment: ImageBitmap): Promise<void>;
+  updateGarment(garment: ImageBitmap, options?: Pick<RealtimeConnectOptions, 'garmentType' | 'description'>): Promise<void>;
   /** Clean disconnect. */
   disconnect(): void;
+  readonly state: RealtimeState;
+  /** Seconds of generated video billed so far (0 until the vendor reports it). */
+  readonly billedSeconds: number;
+  onStateChange(listener: (state: RealtimeState) => void): () => void;
+  /** Failures after connect, including the session limit. */
+  onError(listener: (error: RealtimeTryOnError) => void): () => void;
+  onBilledSeconds(listener: (seconds: number) => void): () => void;
 }
 
 export interface RealtimeTryOn extends Provider {
@@ -245,6 +273,7 @@ export interface RealtimeTryOn extends Provider {
     stream: MediaStream,
     garment: ImageBitmap,
     onFrame: (stream: MediaStream) => void,
+    options?: RealtimeConnectOptions,
   ): Promise<RealtimeSession>;
   /** Whether this feature is enabled via config/feature flag. */
   isFeatureEnabled(): boolean;

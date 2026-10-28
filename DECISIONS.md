@@ -125,3 +125,23 @@ Each entry records what was decided, why, and any alternatives considered.
 **Decision:** `--color-text-muted` `#6b6b80` -> `#8c8ca6` (4.7:1 to 6.0:1 on the surface tokens; the old value was 2.9:1 to 3.8:1).  
 **Why:** WCAG AA for body text.
 
+## D24 — Decart behind a vendor-neutral port
+**Date:** 2026-10-28  
+**Decision:** `DecartRealtimeTryOn` (engine) depends on a small `RealtimeSdk` port; the only file importing `@decartai/sdk` is `apps/web/src/lib/decartAdapter.ts`. `RealtimeSession` gained state, error and billed-seconds events, and `RealtimeTryOnError` carries vendor-neutral codes.  
+**Why:** Keeps vendor types out of the engine (brief rule), lets the provider be tested with a fake SDK, and means a future Meta video model is one new adapter.
+
+## D25 — Live AI is opt-in at three levels
+**Date:** 2026-10-28  
+**Decision:** (1) server flag + key, reported through `/api/health` so the UI hides the button otherwise; (2) per-session consent naming Decart and what is sent; (3) hard session cap, stop on tab-hide or camera-off.  
+**Why:** It streams video to a third party and costs money per second.
+
+## D26 — Short-lived token, key stays server-side
+**Date:** 2026-10-28  
+**Decision:** `POST /api/token` mints a 120 s Decart client token (rate limited per client, `Cache-Control: no-store`, vendor errors hidden and keys redacted in logs). The browser SDK fetches a fresh one on every connect via `apiKeyProvider`. Active sessions outlive the token (per the docs).  
+**Why:** The permanent key must never reach the browser.
+
+## D27 — One provider registry in the web app
+**Date:** 2026-10-28  
+**Decision:** `lib/appRegistry.ts` builds the registry once, after asking the server which optional features exist. Optional providers register only when available. The render hook now uses it.  
+**Why:** Config-only switching and no UI for features that cannot work.
+

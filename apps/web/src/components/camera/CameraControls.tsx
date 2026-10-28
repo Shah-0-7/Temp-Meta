@@ -12,9 +12,21 @@ interface CameraControlsProps {
   onToggleMirror: () => void;
   onSnapshot: () => void;
   mirror: boolean;
+  /** Live AI try-on is enabled on the server. The button is hidden otherwise. */
+  liveAvailable?: boolean;
+  liveActive?: boolean;
+  onLive?: () => void;
 }
 
-export function CameraControls({ onStop, onToggleMirror, onSnapshot, mirror }: CameraControlsProps) {
+export function CameraControls({
+  onStop,
+  onToggleMirror,
+  onSnapshot,
+  mirror,
+  liveAvailable = false,
+  liveActive = false,
+  onLive,
+}: CameraControlsProps) {
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
       {/* Stop camera */}
@@ -48,6 +60,21 @@ export function CameraControls({ onStop, onToggleMirror, onSnapshot, mirror }: C
       >
         📷
       </button>
+
+      {/* Live AI try-on (optional, third party). Only offered when the server enables it. */}
+      {liveAvailable && (
+        <button
+          onClick={onLive}
+          className={`h-10 px-3 rounded-full glass flex items-center justify-center text-sm font-medium transition-colors ${
+            liveActive ? 'text-[var(--color-accent-error)]' : 'text-[var(--color-text-secondary)] hover:text-white'
+          }`}
+          title={liveActive ? 'Stop live AI try-on (L)' : 'Live AI try-on, sends video to a third party (L)'}
+          aria-label={liveActive ? 'Stop live AI try-on' : 'Start live AI try-on'}
+          aria-pressed={liveActive}
+        >
+          {liveActive ? '■ Live AI' : '✨ Live AI'}
+        </button>
+      )}
     </div>
   );
 }

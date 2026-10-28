@@ -24,7 +24,13 @@ export interface ServerConfig {
   decart: {
     apiKey: string;
     featureEnabled: boolean;
+    model: string;
+    /** Hard cap on one live session. */
+    maxSessionSeconds: number;
   };
+
+  /** Browser origins allowed to call the API (also restricts Decart tokens in production). */
+  allowedOrigins: string[];
 
   // Provider selection
   providers: {
@@ -45,6 +51,8 @@ export interface ServerConfig {
   rateLimit: {
     resolveRPM: number;
     generateRPM: number;
+    /** Live-session token requests per minute per client. */
+    tokenRPM: number;
   };
 }
 
@@ -66,7 +74,14 @@ export function loadConfig(): ServerConfig {
     decart: {
       apiKey: process.env.DECART_API_KEY ?? '',
       featureEnabled: process.env.FEATURE_REALTIME_TRYON === 'true',
+      model: process.env.DECART_MODEL || 'lucy-vton-latest',
+      maxSessionSeconds: parseInt(process.env.REALTIME_MAX_SESSION_SECONDS ?? '300', 10),
     },
+
+    allowedOrigins: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173,http://localhost:3000')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
 
     providers: {
       segmenter: process.env.PROVIDER_SEGMENTER ?? 'browser-sam',
@@ -84,6 +99,7 @@ export function loadConfig(): ServerConfig {
     rateLimit: {
       resolveRPM: parseInt(process.env.RATE_LIMIT_RESOLVE_RPM ?? '30', 10),
       generateRPM: parseInt(process.env.RATE_LIMIT_GENERATE_RPM ?? '10', 10),
+      tokenRPM: parseInt(process.env.RATE_LIMIT_TOKEN_RPM ?? '6', 10),
     },
   };
 }

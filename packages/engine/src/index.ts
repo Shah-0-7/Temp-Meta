@@ -22,6 +22,8 @@ export type {
   TryOnGenerator,
   RealtimeSession,
   RealtimeTryOn,
+  RealtimeState,
+  RealtimeConnectOptions,
   GarmentType,
 } from './providers/types.js';
 
@@ -32,6 +34,7 @@ export {
   ProviderTimeoutError,
   RateLimitError,
   ContentPolicyError,
+  RealtimeTryOnError,
 } from './providers/types.js';
 
 // Provider registry
@@ -153,3 +156,11 @@ export type {
 export { PoseModelUnavailableError } from './providers/tryon-generator/errors.js';
 export { createAppRegistry } from './providers/defaults.js';
 
+
+export { DecartRealtimeTryOn, buildRealtimePrompt, flattenOnWhite } from './providers/realtime-tryon/DecartRealtimeTryOn.js';
+export type {
+  DecartRealtimeOptions,
+  RealtimeSdk,
+  RealtimeSdkClient,
+  RealtimeSdkConnectOptions,
+} from './providers/realtime-tryon/DecartRealtimeTryOn.js';

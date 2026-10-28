@@ -27,7 +27,7 @@ Shortcuts: `Space` render, `G` garment, `V` gallery, `M` mirror, `P` perf HUD, `
 |------|------|------|-------------|
 | A Live Fast | WebGL2 mesh warp following your pose, with occlusion and lighting transfer | Browser | No |
 | B Realistic Photo | `TryOnGenerator`. Default: `LocalTryOnGenerator` (on-device). Later: Meta Muse Image | Browser / server | No (local) / Yes (Meta) |
-| C Realtime | Optional Decart realtime, off by default (`FEATURE_REALTIME_TRYON`) | Remote | Yes |
+| C Live AI | Optional Decart realtime AI try-on, off by default (`FEATURE_REALTIME_TRYON` + `DECART_API_KEY`). Consent first; 5-minute session cap; press `L` | Remote | Yes |
 
 ## Architecture
 
@@ -52,6 +52,10 @@ flowchart LR
 - `apps/server`: Hono. URL resolve and image proxy today. Meta calls will live here only, never in the browser.
 
 Provider interfaces live in `packages/engine/src/providers/types.ts`; `createAppRegistry` wires the keyless defaults. Connecting Meta means registering a provider under the same interface and setting `PROVIDER_*`.
+
+## Optional: live AI try-on (Tier C)
+
+Off unless you set `FEATURE_REALTIME_TRYON=true` and `DECART_API_KEY` on the server. The browser then shows a **Live AI** button. Starting it asks for consent, because your camera video is streamed to Decart for the session and usage is billed. The permanent key never reaches the browser: the server mints a 2-minute token at `POST /api/token`. Sessions stop at the time limit, when the tab is hidden, or when the camera stops.
 
 ## Docs
 

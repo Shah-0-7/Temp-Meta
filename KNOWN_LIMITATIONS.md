@@ -49,6 +49,16 @@ Updated as development progresses.
 - **Occasional artifacts.** AI generation may alter small details (logos, text on garments) or produce minor inconsistencies.
 - **One garment at a time.** Multi-garment try-on (e.g., top + bottom) is not supported yet.
 
+## Tier C: live AI try-on (Decart, optional)
+
+- **Off by default** and hidden unless the server has the flag and a key. It is a third-party service: the live camera video leaves the device (after consent) and usage is billed per second.
+- **Not tested against the live service.** It is built from Decart's docs and a fake SDK in tests; no key was available during development. Expect first-run fixes.
+- **Session cap** of 5 minutes (configurable) and it ends when the tab is hidden. The camera is switched to 720p while it runs and restored afterwards.
+- **Tracked overlay stays under it.** The live AI video covers the on-device preview while running; the AI decides the fit, so it is not as controllable as Tier A, and it can alter details of the garment.
+- **Mirror and latency** follow Decart's behaviour; the view is mirrored in CSS to match the normal preview.
+- **Model scoping is not applied** to tokens (the docs show concrete ids and `lucy-vton-latest` is an alias).
+- **Dependency pin.** `@decartai/sdk` is listed as `latest` because the registry was unreachable here; pin it after `pnpm install`.
+
 ## General
 
 - **Gallery is session-only.** Snapshots are not saved anywhere and are lost on reload. Download the ones you want.

@@ -15,6 +15,7 @@ import { loadConfig } from './config.js';
 import { resolveProductUrl } from './services/urlResolver.js';
 import { verifyProxySignature, proxyImage } from './services/imageProxy.js';
 import { SSRFError } from './services/ssrfGuard.js';
+import { handleToken, RateLimiter } from './services/realtimeToken.js';
 
 const config = loadConfig();
 const app = new Hono();
@@ -27,7 +28,7 @@ app.use('*', logger());
 app.use(
   '*',
   cors({
-    origin: config.isDev ? '*' : ['http://localhost:5173', 'http://localhost:3000'],
+    origin: config.isDev ? '*' : config.allowedOrigins,
     allowMethods: ['GET', 'POST', 'OPTIONS'],
     allowHeaders: ['Content-Type'],
   }),
@@ -43,7 +44,10 @@ app.get('/api/health', (c) =>
     version: '0.1.0',
     providers: config.providers,
     features: {
-      realtimeTryOn: config.decart.featureEnabled,
+      // On only when the flag is set AND a key exists, so the UI never offers a dead feature.
+      realtimeTryOn: config.decart.featureEnabled && !!config.decart.apiKey,
+      realtimeModel: config.decart.model,
+      realtimeMaxSessionSeconds: config.decart.maxSessionSeconds,
       metaConfigured: !!config.meta.apiKey,
     },
   }),
@@ -148,11 +152,20 @@ app.post('/api/generate', (c) =>
 );
 
 // ---------------------------------------------------------------------------
-// POST /api/token — Decart client tokens (M8)
+// POST /api/token — short-lived Decart client token (M8, behind FEATURE_REALTIME_TRYON)
 // ---------------------------------------------------------------------------
 
+const tokenLimiter = new RateLimiter(config.rateLimit.tokenRPM);
+
 app.post('/api/token', (c) =>
-  c.json({ error: 'Not implemented yet — coming in M8' }, 501),
+  handleToken(c.req.raw, {
+    enabled: config.decart.featureEnabled,
+    decartApiKey: config.decart.apiKey,
+    model: config.decart.model,
+    allowedOrigins: config.isDev ? [] : config.allowedOrigins,
+    maxSessionSeconds: config.decart.maxSessionSeconds,
+    limiter: tokenLimiter,
+  }),
 );
 
 // ---------------------------------------------------------------------------

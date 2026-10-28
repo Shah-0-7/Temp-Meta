@@ -7,40 +7,14 @@
  */
 
 import { useCallback } from 'react';
-import {
-  createAppRegistry,
-  StillAnalyzer,
-  resolveVisionAssets,
-  type ProviderRegistry,
-  type TryOnGenerator,
-  type TryOnRequest,
-} from '@tryanywhere/engine';
+import type { TryOnGenerator, TryOnRequest } from '@tryanywhere/engine';
+import { getAppRegistry } from '../lib/appRegistry';
 import { getCameraManager } from './useCamera';
 import { engineHandle } from './useEngine';
 import { useCameraStore } from '../stores/cameraStore';
 import { useGarmentStore } from '../stores/garmentStore';
 import { useRenderStore } from '../stores/renderStore';
 import { useSnapshotStore } from '../stores/snapshotStore';
-
-let registry: ProviderRegistry | null = null;
-let analyzer: StillAnalyzer | null = null;
-
-function getRegistry(): ProviderRegistry {
-  if (registry) return registry;
-  registry = createAppRegistry({
-    local: {
-      analyze: async (frame) => {
-        if (!analyzer) {
-          const { assets } = await resolveVisionAssets({ variant: 'full', localBase: import.meta.env.BASE_URL });
-          analyzer = new StillAnalyzer(assets);
-        }
-        const a = await analyzer.analyze(frame);
-        return a ? { landmarks: a.landmarks, occlusion: a.occlusion } : null;
-      },
-    },
-  });
-  return registry;
-}
 
 function canvasToBlob(canvas: HTMLCanvasElement | OffscreenCanvas): Promise<Blob> {
   if ('convertToBlob' in canvas) return canvas.convertToBlob({ type: 'image/png' });
@@ -86,7 +60,7 @@ export function useRealisticRender() {
       const person = await getPerson();
       useRenderStore.getState().setCaptured(URL.createObjectURL(person), person);
 
-      const generator = (await getRegistry().resolve<TryOnGenerator>('tryon-generator')) as TryOnGenerator;
+      const generator = (await (await getAppRegistry()).resolve<TryOnGenerator>('tryon-generator')) as TryOnGenerator;
       const latest = live ? engineHandle.latest : null;
       const request: TryOnRequest = {
         personFrame: person,

@@ -14,6 +14,9 @@ import { PermissionGate } from './PermissionGate';
 import { CameraControls } from './CameraControls';
 import { PoseHint } from './PoseHint';
 import { RenderPanel } from './RenderPanel';
+import { RealtimeLayer } from './RealtimeLayer';
+import { startRealtime, stopRealtime } from '../../hooks/useRealtimeTryOn';
+import { useRealtimeStore } from '../../stores/realtimeStore';
 import { PerfHUD } from '../settings/PerfHUD';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useCameraStore } from '../../stores/cameraStore';
@@ -29,6 +32,9 @@ export function CameraView() {
   const showDebugOverlay = useSettingsStore((s) => s.showDebugOverlay);
   const fpsCap = useSettingsStore((s) => s.fpsCap);
   const [starting, setStarting] = useState(false);
+  const liveAvailable = useRealtimeStore((s) => s.available);
+  const liveStatus = useRealtimeStore((s) => s.status);
+  const liveActive = liveStatus === 'starting' || liveStatus === 'live';
 
   const active = cameraState === 'active';
 
@@ -106,7 +112,12 @@ export function CameraView() {
           onToggleMirror={toggleMirror}
           onSnapshot={() => void render()}
           mirror={mirror}
+          liveAvailable={liveAvailable}
+          liveActive={liveActive}
+          onLive={() => void (liveActive ? stopRealtime() : startRealtime())}
         />
+
+        <RealtimeLayer />
 
         {showPerfHUD && <PerfHUD monitor={perf} />}
       </PermissionGate>
