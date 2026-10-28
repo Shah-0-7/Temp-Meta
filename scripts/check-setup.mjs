@@ -59,7 +59,12 @@ if (has('.env')) {
       .map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]),
   );
   if (env.FEATURE_REALTIME_TRYON === 'true') {
-    if (env.DECART_API_KEY) ok('Live AI try-on is enabled (Decart key set)');
+    if (env.DECART_API_KEY) {
+      ok('Live AI try-on is enabled (Decart key set)');
+      if (!has('apps/web/node_modules/@decartai')) {
+        note('The Decart SDK is not installed, so Live AI will report an error', 'Run: pnpm add @decartai/sdk --filter @tryanywhere/web --filter @tryanywhere/server');
+      }
+    }
     else bad('FEATURE_REALTIME_TRYON=true but DECART_API_KEY is empty', 'Add the key, or set the flag to false.');
   } else {
     note('Live AI try-on is off (default)');

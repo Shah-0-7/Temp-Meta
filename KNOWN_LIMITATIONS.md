@@ -58,7 +58,7 @@ Updated as development progresses.
 - **Tracked overlay stays under it.** The live AI video covers the on-device preview while running; the AI decides the fit, so it is not as controllable as Tier A, and it can alter details of the garment.
 - **Mirror and latency** follow Decart's behaviour; the view is mirrored in CSS to match the normal preview.
 - **Model scoping is not applied** to tokens (the docs show concrete ids and `lucy-vton-latest` is an alias).
-- **Dependency pin.** `@decartai/sdk` is listed as `latest` because the registry was unreachable here; pin it after `pnpm install`.
+- **The SDK is not installed by default.** `@decartai/sdk` is not in `package.json` (the lockfile could not be regenerated here, and CI uses a frozen lockfile). Without it the build uses a stub and the Live AI button reports that the SDK is missing. Install it with `pnpm add @decartai/sdk --filter @tryanywhere/web --filter @tryanywhere/server` and commit the lockfile.
 
 ## General
 

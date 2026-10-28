@@ -150,3 +150,9 @@ Each entry records what was decided, why, and any alternatives considered.
 **Date:** 2026-10-28  
 **Decision:** Three synthetic sample garments ship in `apps/web/public/samples` and appear as one-click buttons in the garment panel. `pnpm check:setup` reports what is ready and how to fix what is not. Auto-adapt now raises a short notice when it changes quality.  
 **Why:** A first run must work with no product link, no server, no keys and no network. Quiet quality changes confuse users. The samples are drawn for this project, so there is no licensing question; each was checked through the real fit pipeline.
+
+## D29 — Decart SDK is an optional, uninstalled dependency
+**Date:** 2026-10-29  
+**Decision:** `@decartai/sdk` is not listed in any `package.json`. `vite.config.ts` aliases it to `src/lib/decartSdkMissing.ts` when it is not installed, `src/types/decartai-sdk.d.ts` supplies the few types used, and the server loads it with a runtime `import()` only when minting a token.  
+**Why:** CI installs with a frozen lockfile and the lockfile could not be regenerated (no registry access). Listing the package broke the Cloudflare build. This keeps CI green and Live AI one `pnpm add` away.
+

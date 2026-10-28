@@ -13,7 +13,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.0",
-    "@decartai/sdk": "latest",
     "@tryanywhere/engine": "workspace:*"
   },
   "devDependencies": {
