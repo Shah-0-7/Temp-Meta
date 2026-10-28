@@ -62,6 +62,7 @@ Updated as development progresses.
 
 ## General
 
+- **Deployed site has no server by default.** A production build only contacts an API if `VITE_API_URL` is set. On the Cloudflare static deploy, product-link lookup and Live AI are unavailable (upload and samples work).
 - **Meta models are not connected.** SAM 3.1, Muse Spark and Muse Image are not wired in yet (milestone M6). The server's `/api/generate` is a stub, so Realistic render always uses the on-device renderer. Early Meta client work exists on the unpushed branch `m6-meta-wip`.
 - **No click/box manual cut-out.** If the automatic cut-out is wrong you can pick another image, upload a cleaner photo, or use a sample. A click-to-select refinement is not built.
 - **Sample garments are synthetic** drawings made for this project; they exist for first-run demos, not as a product catalogue.

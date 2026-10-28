@@ -156,3 +156,8 @@ Each entry records what was decided, why, and any alternatives considered.
 **Decision:** `@decartai/sdk` is not listed in any `package.json`. `vite.config.ts` aliases it to `src/lib/decartSdkMissing.ts` when it is not installed, `src/types/decartai-sdk.d.ts` supplies the few types used, and the server loads it with a runtime `import()` only when minting a token.  
 **Why:** CI installs with a frozen lockfile and the lockfile could not be regenerated (no registry access). Listing the package broke the Cloudflare build. This keeps CI green and Live AI one `pnpm add` away.
 
+## D30 — Static deploy, server optional
+**Date:** 2026-10-29  
+**Decision:** `wrangler.jsonc` at the repo root deploys `apps/web/dist` as SPA static assets. In production builds `API_BASE` is empty unless `VITE_API_URL` is set, and the app skips all server calls.  
+**Why:** Cloudflare could not detect the app in the monorepo root. A deployed https page probing `http://localhost:3001` would also trigger browser local-network prompts for every visitor.
+

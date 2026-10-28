@@ -93,6 +93,12 @@ Automated: engine typecheck, 100+ unit and contract tests (filters, warp math, p
 
 Not verified by the author: real webcam and MediaPipe inference, the full Vite build, ESLint, the React typecheck against real React types, GPU performance, the live Decart service, and the Meta models. Run [`QA_CHECKLIST.md`](QA_CHECKLIST.md) on a real machine before showing this to anyone.
 
+## Deploying the web app (Cloudflare)
+
+The repo root has a `wrangler.jsonc` that publishes the built web app (`apps/web/dist`) as static assets. Use build command `pnpm install && pnpm build` and deploy command `npx wrangler deploy`. Set `name` in `wrangler.jsonc` to your Cloudflare project name if it differs.
+
+The deployed site works fully on-device (camera, tracking, samples, Realistic render, gallery). The API server is not part of that deploy, so pasting product links and Live AI need a separately hosted server: set `VITE_API_URL` at build time to its URL. Without it, a production build never contacts any server.
+
 ## Project docs
 
 - [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md): 2-minute demo, what to say and what not to claim

@@ -14,8 +14,7 @@ import {
   type ProviderRegistry,
 } from '@tryanywhere/engine';
 import { createDecartSdk } from './decartAdapter';
-
-export const API_BASE: string = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+import { API_BASE } from './api';
 
 export interface ServerFeatures {
   /** Live AI try-on (Decart) is enabled AND configured on the server. */
@@ -31,6 +30,7 @@ let featuresPromise: Promise<ServerFeatures> | null = null;
 /** Asks the server what is available. A missing server just means "nothing optional". */
 export function getServerFeatures(): Promise<ServerFeatures> {
   featuresPromise ??= (async () => {
+    if (!API_BASE) return NONE;
     try {
       const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(3000) });
       if (!res.ok) return NONE;

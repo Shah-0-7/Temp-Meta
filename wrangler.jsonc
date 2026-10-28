@@ -1,0 +1,13 @@
+{
+  // Cloudflare deploy config. `wrangler deploy` runs at the repo root after `pnpm build`, and
+  // publishes the built web app as static assets. (The API server is NOT deployed here.)
+  //
+  // `name` must match your Cloudflare project/Worker name. Change it if yours differs.
+  "name": "temp-meta",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./apps/web/dist",
+    // Single-page app: unknown paths serve index.html.
+    "not_found_handling": "single-page-application"
+  }
+}

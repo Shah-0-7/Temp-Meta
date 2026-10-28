@@ -8,8 +8,7 @@
 
 import { useCallback } from 'react';
 import { useGarmentStore } from '../stores/garmentStore';
-
-const SERVER_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+import { API_BASE } from '../lib/api';
 
 export function useGarmentResolver() {
   const store = useGarmentStore();
@@ -17,11 +16,18 @@ export function useGarmentResolver() {
   const resolveUrl = useCallback(async (url: string) => {
     if (!url.trim()) return;
 
+    if (!API_BASE) {
+      store.setResolveError(
+        'Looking up product links needs the TryAnywhere server, which is not available here. Upload a garment photo or try a sample instead.',
+      );
+      return;
+    }
+
     store.setResolving(true);
     store.setResolveError(null);
 
     try {
-      const response = await fetch(`${SERVER_BASE}/api/resolve`, {
+      const response = await fetch(`${API_BASE}/api/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
