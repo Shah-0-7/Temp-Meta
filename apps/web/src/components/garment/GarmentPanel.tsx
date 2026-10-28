@@ -7,6 +7,7 @@
 
 import { URLInput } from './URLInput';
 import { CandidateGrid } from './CandidateGrid';
+import { SampleGarments } from './SampleGarments';
 import { useGarmentStore } from '../../stores/garmentStore';
 
 export function GarmentPanel() {
@@ -50,6 +51,9 @@ export function GarmentPanel() {
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
           {/* URL Input */}
           <URLInput />
+
+          {/* First-run friendly samples (no link or server needed) */}
+          <SampleGarments />
 
           {/* Candidate grid */}
           {candidates.length > 0 && <CandidateGrid />}

@@ -114,6 +114,15 @@ export function useTracking(
 
         const autoAdapt = new AutoAdapt(perfMonitor);
         autoAdapt.setTrackingPipeline(pipeline);
+        autoAdapt.onChange((step, direction) => {
+          useAppStore
+            .getState()
+            .showNotice(
+              direction === 'down'
+                ? `Running slowly, so quality was reduced (${step.label}). You can change this in Settings.`
+                : `Performance recovered: ${step.label}.`,
+            );
+        });
         autoAdaptRef.current = autoAdapt;
 
         pipelineRef.current = pipeline;

@@ -145,3 +145,8 @@ Each entry records what was decided, why, and any alternatives considered.
 **Decision:** `lib/appRegistry.ts` builds the registry once, after asking the server which optional features exist. Optional providers register only when available. The render hook now uses it.  
 **Why:** Config-only switching and no UI for features that cannot work.
 
+
+## D28 — First-run experience: samples, setup check, visible adaptation
+**Date:** 2026-10-28  
+**Decision:** Three synthetic sample garments ship in `apps/web/public/samples` and appear as one-click buttons in the garment panel. `pnpm check:setup` reports what is ready and how to fix what is not. Auto-adapt now raises a short notice when it changes quality.  
+**Why:** A first run must work with no product link, no server, no keys and no network. Quiet quality changes confuse users. The samples are drawn for this project, so there is no licensing question; each was checked through the real fit pipeline.

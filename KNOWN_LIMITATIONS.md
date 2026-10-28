@@ -18,6 +18,7 @@ Updated as development progresses.
 - **No true fabric physics.** The garment is a 2D textured mesh warped by sparse control points. It does not simulate cloth draping, collision, gravity, or inertia. For realistic fabric behavior, use Tier B ("Realistic render").
 - **Limited body coverage.** Currently supports tops and outerwear only. Bottoms, dresses, hats, glasses, and shoes are architecturally supported but not implemented.
 - **Profile / rear views.** Warp quality degrades significantly beyond ~30° torso rotation. The garment may detach or distort at extreme angles.
+- **Long sleeves.** Sleeves longer than the upper arm are mapped along the arm but tend to bunch at the shoulder (seen with a long-sleeve test garment). Short-sleeve tops fit best; long sleeves are not tuned yet.
 - **Complex layering.** Wearing multiple garments (e.g., jacket over shirt) is not supported in this release.
 - **Extreme poses.** Rapid or extreme arm movements can cause the garment mesh to lag or distort until landmarks stabilize.
 - **Transparent / sheer garments.** The renderer treats the garment as opaque. Semi-transparent fabrics won't look correct.
@@ -61,6 +62,9 @@ Updated as development progresses.
 
 ## General
 
+- **Meta models are not connected.** SAM 3.1, Muse Spark and Muse Image are not wired in yet (milestone M6). The server's `/api/generate` is a stub, so Realistic render always uses the on-device renderer. Early Meta client work exists on the unpushed branch `m6-meta-wip`.
+- **No click/box manual cut-out.** If the automatic cut-out is wrong you can pick another image, upload a cleaner photo, or use a sample. A click-to-select refinement is not built.
+- **Sample garments are synthetic** drawings made for this project; they exist for first-run demos, not as a product catalogue.
 - **Gallery is session-only.** Snapshots are not saved anywhere and are lost on reload. Download the ones you want.
 - **Accessibility is basic.** Dialogs trap focus and have labels, text contrast meets AA, and the live pose hints are announced. The live camera canvas itself has no non-visual equivalent, and no full screen-reader audit has been done.
 - **Onboarding remembers itself in `localStorage`;** if the browser blocks storage it shows again each visit.

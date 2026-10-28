@@ -25,6 +25,8 @@ export interface AppState {
   trackingError: string | null;
   /** Help / onboarding dialog */
   helpOpen: boolean;
+  /** Short-lived message (e.g. quality was stepped down). `id` changes each time so repeats re-show. */
+  notice: { id: number; text: string } | null;
 
   // Actions
   setEngineReady: (ready: boolean) => void;
@@ -35,6 +37,8 @@ export interface AppState {
   setTrackingSource: (s: 'local' | 'cdn' | null) => void;
   setTrackingError: (e: string | null) => void;
   setHelpOpen: (open: boolean) => void;
+  showNotice: (text: string) => void;
+  clearNotice: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -46,6 +50,7 @@ export const useAppStore = create<AppState>((set) => ({
   trackingSource: null,
   trackingError: null,
   helpOpen: false,
+  notice: null,
 
   setEngineReady: (ready) => set({ engineReady: ready }),
   setError: (error) => set({ error }),
@@ -55,4 +60,6 @@ export const useAppStore = create<AppState>((set) => ({
   setTrackingSource: (trackingSource) => set({ trackingSource }),
   setTrackingError: (trackingError) => set({ trackingError }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
+  showNotice: (text) => set({ notice: { id: Date.now() + Math.random(), text } }),
+  clearNotice: () => set({ notice: null }),
 }));

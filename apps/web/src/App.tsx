@@ -11,6 +11,7 @@ import { useSnapshotStore } from './stores/snapshotStore';
 import { GalleryPanel } from './components/gallery/GalleryPanel';
 import { HelpDialog } from './components/help/HelpDialog';
 import { ConsentDialog } from './components/consent/ConsentDialog';
+import { Notice } from './components/settings/Notice';
 import { useRealtimeLifecycle, startRealtime, stopRealtime } from './hooks/useRealtimeTryOn';
 import { useRealtimeStore } from './stores/realtimeStore';
 import { useConsentStore } from './stores/consentStore';
@@ -215,6 +216,7 @@ export function App() {
 
       <HelpDialog />
       <ConsentDialog />
+      <Notice />
 
       {/* Status bar */}
       <footer className="px-6 py-2 flex items-center justify-between text-xs text-[var(--color-text-muted)] border-t border-[var(--color-glass-border)]">
