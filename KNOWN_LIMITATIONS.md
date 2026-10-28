@@ -51,6 +51,9 @@ Updated as development progresses.
 
 ## General
 
+- **Gallery is session-only.** Snapshots are not saved anywhere and are lost on reload. Download the ones you want.
+- **Accessibility is basic.** Dialogs trap focus and have labels, text contrast meets AA, and the live pose hints are announced. The live camera canvas itself has no non-visual equivalent, and no full screen-reader audit has been done.
+- **Onboarding remembers itself in `localStorage`;** if the browser blocks storage it shows again each visit.
 - **Desktop Chrome only.** Other browsers and mobile are not tested.
 - **Webcam quality matters.** Low-light or low-resolution cameras produce worse tracking and overlay quality.
 - **URL resolution.** Some e-commerce sites block automated fetching. The app falls back to manual upload.

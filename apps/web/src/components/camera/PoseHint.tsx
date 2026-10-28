@@ -19,6 +19,7 @@ export function PoseHint({ trackingReady }: PoseHintProps) {
   const prep = useGarmentStore((s) => s.prep);
 
   let text: string | null = null;
+  let offerGarment = false;
   let tone: 'info' | 'warn' | 'error' = 'info';
 
   if (trackingError) {
@@ -32,6 +33,7 @@ export function PoseHint({ trackingReady }: PoseHintProps) {
     tone = status.ok ? 'info' : 'warn';
   } else if (trackingReady && status?.ok && !garment) {
     text = 'Body found. Pick a garment (G) to try it on.';
+    offerGarment = true;
   } else if (garment && prep && prep.mode === 'none' && !prep.loadError) {
     text = 'Could not remove the photo background, so the full image is shown. Try a photo on a plain background.';
     tone = 'warn';
@@ -53,6 +55,14 @@ export function PoseHint({ trackingReady }: PoseHintProps) {
       className={`absolute top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-sm max-w-[90%] text-center z-10 ${color}`}
     >
       {text}
+      {offerGarment && (
+        <button
+          onClick={() => useGarmentStore.getState().setGarmentPanelOpen(true)}
+          className="ml-3 px-2.5 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium"
+        >
+          Choose garment
+        </button>
+      )}
     </div>
   );
 }

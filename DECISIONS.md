@@ -110,3 +110,18 @@ Each entry records what was decided, why, and any alternatives considered.
 **Decision:** `scripts/setup-assets.mjs` copies the WASM and downloads models to `apps/web/public/{mediapipe,models}` (git-ignored). At runtime the app probes the local files (rejecting SPA HTML fallbacks) and otherwise uses the CDN at the pinned version `1.1.1`. Supersedes D12's `@latest`.  
 **Why:** Offline demos, no WASM/JS version mismatch.
 
+## D21 — Snapshot gallery is memory-only
+**Date:** 2026-10-28  
+**Decision:** Renders are kept in an in-memory Zustand store (max 12, oldest evicted, object URLs revoked). Nothing goes to localStorage, IndexedDB or the server.  
+**Why:** Snapshots contain the user's face; the brief forbids storing faces or frames. Trade-off: they vanish on reload. The list logic is pure (`lib/snapshotList.ts`) and unit-tested.
+
+## D22 — Shortcuts defined once; dialogs share a focus trap
+**Date:** 2026-10-28  
+**Decision:** `lib/shortcuts.ts` is the single list used by the key handler, footer and help dialog. While a dialog is open only `Esc` and `?` act, and `Esc` closes the top-most layer first. Dialogs use `useFocusTrap` (focus in, Tab contained, focus restored).  
+**Why:** Prevents the help text drifting from behaviour, and stops Space starting a render behind an open dialog.
+
+## D23 — Muted text colour raised for contrast
+**Date:** 2026-10-28  
+**Decision:** `--color-text-muted` `#6b6b80` -> `#8c8ca6` (4.7:1 to 6.0:1 on the surface tokens; the old value was 2.9:1 to 3.8:1).  
+**Why:** WCAG AA for body text.
+

@@ -20,6 +20,7 @@ import { engineHandle } from './useEngine';
 import { useCameraStore } from '../stores/cameraStore';
 import { useGarmentStore } from '../stores/garmentStore';
 import { useRenderStore } from '../stores/renderStore';
+import { useSnapshotStore } from '../stores/snapshotStore';
 
 let registry: ProviderRegistry | null = null;
 let analyzer: StillAnalyzer | null = null;
@@ -83,7 +84,7 @@ export function useRealisticRender() {
       }
 
       const person = await getPerson();
-      useRenderStore.getState().setCaptured(URL.createObjectURL(person));
+      useRenderStore.getState().setCaptured(URL.createObjectURL(person), person);
 
       const generator = (await getRegistry().resolve<TryOnGenerator>('tryon-generator')) as TryOnGenerator;
       const latest = live ? engineHandle.latest : null;
@@ -102,11 +103,25 @@ export function useRealisticRender() {
 
       const started = performance.now();
       const result = await generator.generate(request);
+      const provider = String(result.metadata?.provider ?? generator.name);
+      const note = typeof result.metadata?.note === 'string' ? result.metadata.note : null;
       useRenderStore.getState().setDone({
         afterBlob: result.image,
-        provider: String(result.metadata?.provider ?? generator.name),
-        note: typeof result.metadata?.note === 'string' ? result.metadata.note : null,
+        provider,
+        note,
         elapsedMs: performance.now() - started,
+      });
+
+      // Keep it for this session so outfits can be compared. Memory only.
+      const picked = useGarmentStore.getState().selectedGarment;
+      useSnapshotStore.getState().add({
+        beforeBlob: person,
+        afterBlob: result.image,
+        mirrorBefore: mirror,
+        provider,
+        note,
+        garmentLabel: picked?.alt?.trim() || 'Garment',
+        garmentThumb: picked?.proxyUrl ?? picked?.url ?? null,
       });
     } catch (err) {
       console.error('[useRealisticRender]', err);

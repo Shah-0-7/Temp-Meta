@@ -4,14 +4,21 @@
  * Result of a "Realistic render": before/after compare slider, PNG download.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRenderStore } from '../../stores/renderStore';
 import { useRealisticRender } from '../../hooks/useRealisticRender';
+import { useGarmentStore } from '../../stores/garmentStore';
+import { useSnapshotStore } from '../../stores/snapshotStore';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export function RenderPanel() {
   const s = useRenderStore();
   const { render } = useRealisticRender();
   const [split, setSplit] = useState(50);
+  const ref = useRef<HTMLDivElement>(null);
+  const hasGarment = useGarmentStore((st) => !!st.selectedGarment);
+  const savedCount = useSnapshotStore((st) => st.snapshots.length);
+  useFocusTrap(s.open, ref);
 
   if (!s.open) return null;
 
@@ -26,13 +33,14 @@ export function RenderPanel() {
   };
 
   return (
-    <div
-      className="absolute inset-0 z-30 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Realistic render"
-    >
-      <div className="glass rounded-2xl max-w-4xl w-full max-h-full overflow-auto p-4 flex flex-col gap-3">
+    <div className="absolute inset-0 z-30 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Realistic render"
+        className="glass rounded-2xl max-w-4xl w-full max-h-full overflow-auto p-4 flex flex-col gap-3 outline-none"
+      >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">Realistic render</h2>
           <button
@@ -45,7 +53,25 @@ export function RenderPanel() {
         </div>
 
         {s.status === 'error' && (
-          <div className="rounded-xl p-4 text-sm text-[var(--color-accent-error)] bg-black/30">{s.error}</div>
+          <div role="alert" className="rounded-xl p-4 text-sm bg-black/30 flex flex-col gap-3">
+            <p className="text-[var(--color-accent-error)]">{s.error}</p>
+            <div className="flex gap-2">
+              {!hasGarment && (
+                <button
+                  onClick={() => {
+                    s.close();
+                    useGarmentStore.getState().setGarmentPanelOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm"
+                >
+                  Choose a garment
+                </button>
+              )}
+              <button onClick={() => void render()} className="px-3 py-1.5 rounded-lg glass text-sm">
+                Try again
+              </button>
+            </div>
+          </div>
         )}
 
         {s.beforeUrl && s.status !== 'error' && (
@@ -88,6 +114,7 @@ export function RenderPanel() {
                   onChange={(e) => setSplit(Number(e.target.value))}
                   className="absolute inset-x-0 bottom-3 mx-6 accent-brand-500"
                   aria-label="Compare before and after"
+                  aria-valuetext={`${split}% before, ${100 - split}% after`}
                 />
                 <span className="absolute top-2 left-2 text-xs glass rounded px-2 py-0.5">Before</span>
                 <span className="absolute top-2 right-2 text-xs glass rounded px-2 py-0.5">After</span>
@@ -97,7 +124,7 @@ export function RenderPanel() {
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="glass rounded-xl px-4 py-2 text-sm flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-brand-400/30 border-t-brand-400 rounded-full animate-spin" />
-                  {s.status === 'capturing' ? 'Capturing…' : 'Rendering on your device…'}
+                  {s.status === 'capturing' ? 'Capturing…' : 'Rendering…'}
                 </div>
               </div>
             )}
@@ -113,7 +140,18 @@ export function RenderPanel() {
           </p>
         )}
 
-        <div className="flex gap-2 justify-end">
+        <div className="flex gap-2 justify-end items-center">
+          {s.status === 'done' && savedCount > 0 && (
+            <button
+              onClick={() => {
+                s.close();
+                useSnapshotStore.getState().setOpen(true);
+              }}
+              className="mr-auto px-3 py-2 rounded-xl glass text-sm"
+            >
+              Open gallery ({savedCount})
+            </button>
+          )}
           <button
             onClick={() => void render()}
             disabled={busy}

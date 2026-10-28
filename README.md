@@ -17,7 +17,9 @@ pnpm dev              # web on :5173, server on :3001
 2. Allow the camera. Stand back so your shoulders and hips are visible and face the camera. Hints appear if not.
 3. The garment follows you live. Press **Space** (or the camera button) for a **Realistic render**, which you can compare, download or retake.
 
-Shortcuts: `M` mirror, `Space` render, `Esc` close the render panel. Settings has camera selection, resolution, FPS cap, the Accurate/Fast pose model and the shading strength.
+Every render is kept in a session gallery (`V`) where you can re-open, download or compare two outfits side by side. Snapshots live in memory only and disappear on reload.
+
+Shortcuts: `Space` render, `G` garment, `V` gallery, `M` mirror, `P` perf HUD, `D` debug overlay, `?` help, `Esc` close the top panel. The first visit shows a short walkthrough; reopen it with `?`. Settings has camera selection, resolution, FPS cap, the Accurate/Fast pose model and the shading strength.
 
 ## Tiers
 

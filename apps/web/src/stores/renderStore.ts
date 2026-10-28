@@ -13,6 +13,8 @@ export interface RenderState {
   status: RenderStatus;
   /** Camera frame as captured (un-mirrored). Object URL. */
   beforeUrl: string | null;
+  /** The captured frame itself, kept so the result can be saved to the gallery. */
+  beforeBlob: Blob | null;
   /** Rendered result. Object URL. */
   afterUrl: string | null;
   afterBlob: Blob | null;
@@ -24,7 +26,9 @@ export interface RenderState {
   error: string | null;
 
   begin: (mirrorBefore: boolean) => void;
-  setCaptured: (beforeUrl: string) => void;
+  setCaptured: (beforeUrl: string, beforeBlob: Blob) => void;
+  /** Re-open a saved snapshot in the compare view (fresh object URLs). */
+  showSnapshot: (s: { beforeBlob: Blob; afterBlob: Blob; mirrorBefore: boolean; provider: string; note: string | null }) => void;
   setDone: (r: { afterBlob: Blob; provider: string; note: string | null; elapsedMs: number }) => void;
   setError: (message: string) => void;
   close: () => void;
@@ -38,6 +42,7 @@ export const useRenderStore = create<RenderState>((set, get) => ({
   open: false,
   status: 'idle',
   beforeUrl: null,
+  beforeBlob: null,
   afterUrl: null,
   afterBlob: null,
   mirrorBefore: true,
@@ -54,6 +59,7 @@ export const useRenderStore = create<RenderState>((set, get) => ({
       open: true,
       status: 'capturing',
       beforeUrl: null,
+      beforeBlob: null,
       afterUrl: null,
       afterBlob: null,
       mirrorBefore,
@@ -63,7 +69,25 @@ export const useRenderStore = create<RenderState>((set, get) => ({
       error: null,
     });
   },
-  setCaptured: (beforeUrl) => set({ beforeUrl, status: 'rendering' }),
+  setCaptured: (beforeUrl, beforeBlob) => set({ beforeUrl, beforeBlob, status: 'rendering' }),
+  showSnapshot: ({ beforeBlob, afterBlob, mirrorBefore, provider, note }) => {
+    const { beforeUrl, afterUrl } = get();
+    revoke(beforeUrl);
+    revoke(afterUrl);
+    set({
+      open: true,
+      status: 'done',
+      beforeBlob,
+      beforeUrl: URL.createObjectURL(beforeBlob),
+      afterBlob,
+      afterUrl: URL.createObjectURL(afterBlob),
+      mirrorBefore,
+      provider,
+      note,
+      elapsedMs: null,
+      error: null,
+    });
+  },
   setDone: ({ afterBlob, provider, note, elapsedMs }) =>
     set({ afterBlob, afterUrl: URL.createObjectURL(afterBlob), provider, note, elapsedMs, status: 'done' }),
   setError: (error) => set({ error, status: 'error' }),
@@ -71,6 +95,6 @@ export const useRenderStore = create<RenderState>((set, get) => ({
     const { beforeUrl, afterUrl } = get();
     revoke(beforeUrl);
     revoke(afterUrl);
-    set({ open: false, status: 'idle', beforeUrl: null, afterUrl: null, afterBlob: null, error: null });
+    set({ open: false, status: 'idle', beforeUrl: null, beforeBlob: null, afterUrl: null, afterBlob: null, error: null });
   },
 }));

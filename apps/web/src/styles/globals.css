@@ -27,7 +27,7 @@
   /* Text */
   --color-text-primary: #f0f0f5;
   --color-text-secondary: #a0a0b8;
-  --color-text-muted: #6b6b80;
+  --color-text-muted: #8c8ca6; /* >= 4.5:1 on surface-0/1/2 (was #6b6b80, ~3.7:1) */
 
   /* Accent */
   --color-accent-success: #22c55e;
@@ -130,4 +130,26 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ----------------------------------------------------------------
+   Keyboard focus
+   ---------------------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-300);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Dialogs take focus programmatically; no ring on the container itself. */
+[role="dialog"]:focus {
+  outline: none;
+}
+
+kbd {
+  font-family: inherit;
 }

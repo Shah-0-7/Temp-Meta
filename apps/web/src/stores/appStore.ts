@@ -23,6 +23,8 @@ export interface AppState {
   trackingSource: 'local' | 'cdn' | null;
   /** Set when tracking could not start; the camera preview still works */
   trackingError: string | null;
+  /** Help / onboarding dialog */
+  helpOpen: boolean;
 
   // Actions
   setEngineReady: (ready: boolean) => void;
@@ -32,6 +34,7 @@ export interface AppState {
   setPoseStatus: (s: PoseStatus | null) => void;
   setTrackingSource: (s: 'local' | 'cdn' | null) => void;
   setTrackingError: (e: string | null) => void;
+  setHelpOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -42,6 +45,7 @@ export const useAppStore = create<AppState>((set) => ({
   poseStatus: null,
   trackingSource: null,
   trackingError: null,
+  helpOpen: false,
 
   setEngineReady: (ready) => set({ engineReady: ready }),
   setError: (error) => set({ error }),
@@ -50,4 +54,5 @@ export const useAppStore = create<AppState>((set) => ({
   setPoseStatus: (poseStatus) => set({ poseStatus }),
   setTrackingSource: (trackingSource) => set({ trackingSource }),
   setTrackingError: (trackingError) => set({ trackingError }),
+  setHelpOpen: (helpOpen) => set({ helpOpen }),
 }));
