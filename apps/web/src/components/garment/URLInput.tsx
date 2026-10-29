@@ -8,6 +8,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useGarmentStore } from '../../stores/garmentStore';
 import { useGarmentResolver } from '../../hooks/useGarmentResolver';
+import { Icon } from '../ui/Icon';
 
 export function URLInput() {
   const { urlInput, setUrlInput, resolving, resolveError } = useGarmentStore();
@@ -68,8 +69,8 @@ export function URLInput() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm pointer-events-none">
-              🔗
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none">
+              <Icon name="link" size={17} />
             </div>
             <input
               ref={inputRef}
@@ -78,8 +79,8 @@ export function URLInput() {
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               onPaste={handlePaste}
-              placeholder="Paste product URL from any store…"
-              className={`w-full pl-9 pr-3 py-2.5 rounded-xl glass text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 transition-all ${
+              placeholder="Paste a product link…"
+              className={`w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--color-glass-border)] bg-[var(--color-surface-0)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 transition-all ${
                 resolveError
                   ? 'focus:ring-[var(--color-accent-error)]/40 ring-1 ring-[var(--color-accent-error)]/30'
                   : 'focus:ring-brand-500/40'
@@ -93,15 +94,15 @@ export function URLInput() {
           <button
             type="submit"
             disabled={!urlInput.trim() || resolving}
-            className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-200 active:scale-[0.97] whitespace-nowrap"
+            className="btn-primary px-4 py-2.5 rounded-xl text-sm whitespace-nowrap"
           >
             {resolving ? (
               <span className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Resolving…
+                <span className="w-3.5 h-3.5 border-2 border-[var(--color-ink)]/30 border-t-[var(--color-ink)] rounded-full animate-spin" />
+                Finding…
               </span>
             ) : (
-              'Find Images'
+              'Find images'
             )}
           </button>
         </div>
@@ -111,11 +112,11 @@ export function URLInput() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="text-brand-400 hover:text-brand-300 transition-colors underline underline-offset-2"
+            className="link-quiet !text-[13px]"
           >
-            Upload image
+            Upload an image
           </button>
-          <span>or drag & drop a garment photo here</span>
+          <span>or drop a garment photo here.</span>
           <input
             ref={fileInputRef}
             type="file"
@@ -128,7 +129,7 @@ export function URLInput() {
         {/* Error message */}
         {resolveError && (
           <div className="flex gap-2 p-2.5 rounded-lg bg-[var(--color-accent-error)]/10 border border-[var(--color-accent-error)]/20">
-            <span className="text-[var(--color-accent-error)] shrink-0">⚠</span>
+            <span className="text-[var(--color-accent-error)] shrink-0 mt-px"><Icon name="alert" size={16} /></span>
             <p className="text-xs text-[var(--color-accent-error)] leading-relaxed">
               {resolveError}
             </p>

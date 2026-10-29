@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { SHORTCUTS } from '../../lib/shortcuts';
+import { Icon } from '../ui/Icon';
 
 const SEEN_KEY = 'tryanywhere.onboarded.v1';
 
@@ -32,7 +33,7 @@ function markSeen(): void {
 const STEPS = [
   {
     title: 'Turn on your camera',
-    body: 'Allow camera access. Everything in the live preview runs on your device; your video never leaves your computer. No camera? You can upload a photo instead.',
+    body: 'Allow camera access. The live preview runs on your device, and anything sent online asks you first. No camera? Upload a photo instead.',
   },
   {
     title: 'Stand so we can see you',
@@ -88,18 +89,14 @@ export function HelpDialog() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="help-title"
-        className="glass rounded-2xl w-full max-w-lg p-5 flex flex-col gap-4 outline-none"
+        className="sheet sheet-modal w-full max-w-lg p-6 flex flex-col gap-4 outline-none"
       >
         <div className="flex items-center justify-between">
-          <h2 id="help-title" className="text-lg font-semibold">
-            Welcome to Try<span className="text-brand-400">Anywhere</span>
+          <h2 id="help-title" className="sheet-title !text-[1.6rem]">
+            Welcome to TryAnywhere
           </h2>
-          <button
-            onClick={close}
-            className="w-8 h-8 rounded-lg glass text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-            aria-label="Close help"
-          >
-            ✕
+          <button onClick={close} className="tool icon-btn" aria-label="Close help">
+            <Icon name="close" size={18} />
           </button>
         </div>
 
@@ -110,8 +107,8 @@ export function HelpDialog() {
               role="tab"
               aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={`px-3 py-1.5 rounded-lg text-sm ${
-                tab === t ? 'bg-brand-600/20 text-brand-300 border border-brand-500/30' : 'glass'
+              className={`px-3.5 py-1.5 rounded-full text-sm font-semibold ${
+                tab === t ? 'bg-brand-600/15 text-brand-300 border border-brand-500/40' : 'glass'
               }`}
             >
               {t === 'start' ? 'Getting started' : 'Keyboard shortcuts'}
@@ -125,24 +122,24 @@ export function HelpDialog() {
               Step {step + 1} of {STEPS.length}
             </p>
             <div>
-              <h3 className="font-medium">{STEPS[step].title}</h3>
-              <p className="text-sm text-[var(--color-text-secondary)] mt-1">{STEPS[step].body}</p>
+              <h3 className="font-display text-xl leading-snug">{STEPS[step].title}</h3>
+              <p className="text-[15px] leading-relaxed text-[var(--color-text-secondary)] mt-1.5 mb-0">{STEPS[step].body}</p>
             </div>
             <div className="flex items-center justify-between">
-              <button onClick={close} className="px-3 py-1.5 rounded-lg glass text-sm">
+              <button onClick={close} className="glass px-4 py-2 rounded-full text-sm font-semibold">
                 {last ? 'Close' : 'Skip'}
               </button>
               <div className="flex gap-2">
                 <button
                   onClick={() => setStep((s) => Math.max(0, s - 1))}
                   disabled={step === 0}
-                  className="px-3 py-1.5 rounded-lg glass text-sm disabled:opacity-40"
+                  className="glass px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-40"
                 >
                   Back
                 </button>
                 <button
                   onClick={() => (last ? close() : setStep((s) => s + 1))}
-                  className="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium"
+                  className="btn-primary px-5 py-2 rounded-full text-sm"
                 >
                   {last ? 'Start' : 'Next'}
                 </button>
@@ -154,7 +151,7 @@ export function HelpDialog() {
             {SHORTCUTS.map((s) => (
               <div key={s.key} className="contents">
                 <dt>
-                  <kbd className="px-2 py-0.5 rounded glass text-xs">{s.label}</kbd>
+                  <kbd>{s.label}</kbd>
                 </dt>
                 <dd className="m-0 text-[var(--color-text-secondary)]">{s.description}</dd>
               </div>

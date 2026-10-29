@@ -17,13 +17,13 @@ export function SampleGarments() {
 
   return (
     <div>
-      <p className="text-xs text-[var(--color-text-muted)] mb-2">No product link handy? Try a sample:</p>
+      <p className="field-title">No link handy? Try a sample.</p>
       <ul className="flex gap-2 list-none p-0 m-0">
         {SAMPLE_GARMENTS.map((s, i) => (
           <li key={s.id} className="flex-1">
             <button
               onClick={() => pickSample(i)}
-              className="w-full rounded-xl glass overflow-hidden flex flex-col items-center gap-1 p-1.5 hover:ring-2 hover:ring-brand-400/50 transition"
+              className="glass w-full rounded-xl overflow-hidden flex flex-col items-center gap-1.5 p-1.5 hover:ring-2 hover:ring-brand-400/60 transition"
               aria-label={`Try sample: ${s.label}`}
             >
               <img
@@ -32,7 +32,7 @@ export function SampleGarments() {
                 className="w-full aspect-square object-contain rounded-lg bg-white"
                 draggable={false}
               />
-              <span className="text-[10px] leading-tight text-[var(--color-text-secondary)] text-center">{s.label}</span>
+              <span className="text-[11px] leading-tight font-medium text-[var(--color-text-secondary)] text-center">{s.label}</span>
             </button>
           </li>
         ))}

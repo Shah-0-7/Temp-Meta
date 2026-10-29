@@ -8,18 +8,19 @@
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useCamera } from '../../hooks/useCamera';
 import type { ResolutionPreset } from '@tryanywhere/engine';
+import { Icon } from '../ui/Icon';
 
 const RESOLUTION_OPTIONS: { value: ResolutionPreset; label: string }[] = [
-  { value: '480p', label: '480p (SD)' },
+  { value: '480p', label: '480p (standard)' },
   { value: '720p', label: '720p (HD)' },
   { value: '1080p', label: '1080p (Full HD)' },
-  { value: 'native', label: 'Native (device default)' },
+  { value: 'native', label: 'Native (camera default)' },
 ];
 
 const FPS_OPTIONS = [
   { value: 0, label: 'Uncapped' },
-  { value: 30, label: '30 FPS' },
-  { value: 60, label: '60 FPS' },
+  { value: 30, label: '30 fps' },
+  { value: 60, label: '60 fps' },
 ];
 
 const TRACKING_RATES = [
@@ -42,23 +43,19 @@ export function SettingsPanel() {
   if (!settings.settingsOpen) return null;
 
   return (
-    <div className="absolute top-0 right-0 bottom-0 w-80 glass rounded-l-2xl border-l border-[var(--color-glass-border)] z-20 overflow-y-auto">
+    <div className="sheet sheet-right absolute top-0 right-0 bottom-0 w-[22rem] max-w-[92vw] z-20 overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-glass-border)]">
-        <h2 className="text-base font-semibold">Settings</h2>
-        <button
-          onClick={() => settings.setSettingsOpen(false)}
-          className="w-7 h-7 rounded-lg glass flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors text-sm"
-          aria-label="Close settings"
-        >
-          ✕
+      <div className="sheet-head">
+        <h2 className="sheet-title">Settings</h2>
+        <button onClick={() => settings.setSettingsOpen(false)} className="tool icon-btn" aria-label="Close settings">
+          <Icon name="close" size={18} />
         </button>
       </div>
 
       <div className="px-5 py-4 flex flex-col gap-6">
         {/* Resolution */}
         <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+          <h3 className="field-title">
             Resolution
           </h3>
           <div className="flex flex-col gap-1.5">
@@ -80,8 +77,8 @@ export function SettingsPanel() {
 
         {/* FPS Cap */}
         <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-            FPS Cap
+          <h3 className="field-title">
+            Frame rate limit
           </h3>
           <div className="flex gap-2">
             {FPS_OPTIONS.map((opt) => (
@@ -102,8 +99,8 @@ export function SettingsPanel() {
 
         {/* Tracking Rate */}
         <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-            Tracking Rate
+          <h3 className="field-title">
+            Tracking rate
           </h3>
           <div className="flex gap-2">
             {TRACKING_RATES.map((opt) => (
@@ -125,7 +122,7 @@ export function SettingsPanel() {
         {/* Camera device + what the browser actually gave us */}
         {cameraState === 'active' && (
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+            <h3 className="field-title">
               Camera
             </h3>
             {devices.length > 1 && (
@@ -152,7 +149,7 @@ export function SettingsPanel() {
 
         {/* Body tracking model */}
         <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+          <h3 className="field-title">
             Body tracking
           </h3>
           <div className="flex gap-2">
@@ -180,7 +177,7 @@ export function SettingsPanel() {
 
         {/* Garment lighting */}
         <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+          <h3 className="field-title">
             Fabric shading
           </h3>
           <input
@@ -199,12 +196,12 @@ export function SettingsPanel() {
 
         {/* Toggles */}
         <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-            Debug
+          <h3 className="field-title">
+            Developer tools
           </h3>
           <div className="flex flex-col gap-2">
             <label className="flex items-center justify-between px-3 py-2 rounded-lg glass cursor-pointer">
-              <span className="text-sm text-[var(--color-text-secondary)]">Auto-adapt quality</span>
+              <span className="text-sm text-[var(--color-text-secondary)]">Adjust quality automatically</span>
               <input
                 type="checkbox"
                 checked={settings.autoAdapt}
@@ -213,7 +210,7 @@ export function SettingsPanel() {
               />
             </label>
             <label className="flex items-center justify-between px-3 py-2 rounded-lg glass cursor-pointer">
-              <span className="text-sm text-[var(--color-text-secondary)]">Performance HUD</span>
+              <span className="text-sm text-[var(--color-text-secondary)]">Performance readout</span>
               <input
                 type="checkbox"
                 checked={settings.showPerfHUD}

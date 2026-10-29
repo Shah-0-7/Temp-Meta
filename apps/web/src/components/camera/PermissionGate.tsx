@@ -9,6 +9,9 @@
  */
 
 import { useCameraStore } from '../../stores/cameraStore';
+import { useGarmentStore } from '../../stores/garmentStore';
+import { Icon } from '../ui/Icon';
+import { PatternArt } from './PatternArt';
 
 interface PermissionGateProps {
   onRequestCamera: () => void;
@@ -27,44 +30,28 @@ export function PermissionGate({ onRequestCamera, onUploadPhoto, children }: Per
 
   if (cameraState === 'requesting') {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <div className="w-12 h-12 border-3 border-brand-400/30 border-t-brand-400 rounded-full animate-spin" />
-        <p className="text-[var(--color-text-secondary)] animate-pulse">
-          Requesting camera access…
-        </p>
+      <div className="state" role="status">
+        <div className="w-9 h-9 border-[3px] border-brand-400/30 border-t-brand-400 rounded-full animate-spin" />
+        <h2 className="state-title">Waiting for the camera</h2>
+        <p className="hero-copy">Choose Allow in your browser&apos;s permission prompt.</p>
       </div>
     );
   }
 
   if (cameraState === 'denied') {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 max-w-md mx-auto px-6">
-        <div className="text-5xl">🚫</div>
-        <h3 className="text-xl font-semibold text-[var(--color-accent-error)]">
-          Camera access denied
-        </h3>
-        <p className="text-[var(--color-text-secondary)] text-center text-sm leading-relaxed">
-          {errorMessage ?? 'TryAnywhere needs camera access for the live try-on preview.'} To enable it:
+      <div className="state" role="alert">
+        <h2 className="state-title">The camera is blocked</h2>
+        <p className="hero-copy">
+          {errorMessage ?? 'TryAnywhere needs the camera for the live preview.'} To allow it:
         </p>
-        <ol className="text-sm text-[var(--color-text-secondary)] space-y-2 text-left">
-          <li className="flex gap-2">
-            <span className="text-brand-400 font-semibold shrink-0">1.</span>
-            Click the camera icon in your browser's address bar
-          </li>
-          <li className="flex gap-2">
-            <span className="text-brand-400 font-semibold shrink-0">2.</span>
-            Select "Allow" for camera access
-          </li>
-          <li className="flex gap-2">
-            <span className="text-brand-400 font-semibold shrink-0">3.</span>
-            Reload this page
-          </li>
+        <ol className="state-steps">
+          <li>Click the camera icon in your browser&apos;s address bar.</li>
+          <li>Choose Allow for the camera.</li>
+          <li>Reload this page.</li>
         </ol>
-        <button
-          onClick={onRequestCamera}
-          className="mt-2 px-5 py-2.5 rounded-xl glass text-sm font-medium hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          Try Again
+        <button onClick={onRequestCamera} className="btn-primary btn-lg">
+          Try again
         </button>
       </div>
     );
@@ -72,62 +59,58 @@ export function PermissionGate({ onRequestCamera, onUploadPhoto, children }: Per
 
   if (cameraState === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 max-w-md mx-auto px-6">
-        <div className="text-5xl">⚠️</div>
-        <h3 className="text-xl font-semibold text-[var(--color-accent-warning)]">
-          Camera error
-        </h3>
-        <p className="text-[var(--color-text-secondary)] text-center text-sm">
-          {errorMessage ?? 'Could not access your camera. Make sure no other app is using it and try again.'}
+      <div className="state" role="alert">
+        <h2 className="state-title">The camera didn&apos;t start</h2>
+        <p className="hero-copy">
+          {errorMessage ?? 'Close any other app that is using the camera, then try again.'}
         </p>
-        <button
-          onClick={onRequestCamera}
-          className="mt-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
-        >
-          Retry
+        <button onClick={onRequestCamera} className="btn-primary btn-lg">
+          Try again
         </button>
       </div>
     );
   }
 
-  // idle state — show call-to-action
+  // idle: the first thing anyone sees
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-6 max-w-lg mx-auto px-6">
-      <div className="text-7xl">👕</div>
-      <h2 className="text-2xl font-bold text-center">
-        Try on clothes from{' '}
-        <span className="bg-gradient-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">
-          any store
-        </span>
-      </h2>
-      <p className="text-[var(--color-text-secondary)] text-center leading-relaxed">
-        Paste a product URL, upload a garment image, or drag & drop — then see yourself
-        wearing it live through your webcam.
-      </p>
-      <div className="flex flex-col gap-3 w-full max-w-xs">
-        <button
-          onClick={onRequestCamera}
-          className="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium transition-all duration-200 hover:shadow-[var(--shadow-glow)] active:scale-[0.98]"
-        >
-          📸 Enable Camera
+    <div className="hero">
+      <div className="hero-text">
+        <h2 className="hero-title">Try it on before you buy it.</h2>
+        <p className="hero-copy">
+          Paste a link from any online store, or upload a photo of a garment. Your camera shows you wearing it.
+        </p>
+
+        <div className="hero-actions">
+          <button onClick={onRequestCamera} className="btn-primary btn-lg">
+            <Icon name="camera" size={20} />
+            Turn on camera
+          </button>
+          <label className="btn-outline btn-lg cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2">
+            <Icon name="upload" size={20} />
+            Use a photo instead
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onUploadPhoto?.(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
+        </div>
+
+        <button className="link-quiet" onClick={() => useGarmentStore.getState().setGarmentPanelOpen(true)}>
+          Pick a garment first
         </button>
-        <label className="px-6 py-3 rounded-xl glass text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-medium transition-all duration-200 text-center cursor-pointer">
-          🖼️ Upload a Photo Instead
-          <input
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onUploadPhoto?.(file);
-              e.target.value = '';
-            }}
-          />
-        </label>
+
+        <p className="hero-note">The live preview runs on your device. Anything sent online asks you first.</p>
       </div>
-      <p className="text-xs text-[var(--color-text-muted)]">
-        Your camera feed never leaves your device in Fast Preview mode.
-      </p>
+
+      <div className="hero-art">
+        <PatternArt />
+      </div>
     </div>
   );
 }

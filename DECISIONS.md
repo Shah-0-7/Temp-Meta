@@ -176,3 +176,13 @@ Each entry records what was decided, why, and any alternatives considered.
 **Date:** 2026-10-29  
 **Decision:** The endpoint name and the file-upload step are marked unverified in code and docs, and `pnpm check:free-tryon` exists to confirm them. The hf.space hosts could not be reached from the build environment.  
 **Why:** Never invent API details. A one-command check turns an assumption into a fact on the first real run.
+
+## D34 — Visual identity: the fitting room
+**Date:** 2026-10-30  
+**Decision:** Cool pattern-paper chrome with the camera as a dark "mirror" inset into it. Panels and dialogs are opaque paper sheets over the mirror. Type is Young Serif (wordmark, headings, hero) with Hanken Grotesk for the interface. Tape-measure yellow is used only for the one main action on a screen. The first screen is an arched mirror holding a tailor's pattern drawing (`PatternArt`), which draws itself once on load. Emoji are replaced by a small stroke icon set (`components/ui/Icon.tsx`).  
+**Why:** The previous look (indigo glass on near-black, Inter, emoji icons, a gradient word in the headline) could belong to any app. The subject here is trying clothes on, so the identity borrows from tailoring. Tokens keep one name set with two values (paper and `.stage`), so components follow whichever context they sit in. Component rules live in `@layer components`, so Tailwind utilities can still override them.
+
+## D35 — Say what happened, and do not overstate privacy
+**Date:** 2026-10-30  
+**Decision:** The render dialog now shows the render `note` (for example, why the on-device render was used instead of the AI model). The "Nothing was uploaded" line shows only when there is no note and the render was local.  
+**Why:** After a failed AI upload the old line would have been untrue, and the fallback explanation was stored but never displayed.

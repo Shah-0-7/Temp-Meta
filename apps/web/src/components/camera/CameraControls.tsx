@@ -1,11 +1,11 @@
 /**
  * @module components/camera/CameraControls
  *
- * Floating controls overlaid on the camera view:
- * - Stop camera
- * - Toggle mirror
- * - Realistic render of the current frame
+ * The dock floating at the bottom of the mirror: stop, mirror, the main action
+ * (render this moment as a photo) and, when the server enables it, Live AI.
  */
+
+import { Icon } from '../ui/Icon';
 
 interface CameraControlsProps {
   onStop: () => void;
@@ -28,52 +28,49 @@ export function CameraControls({
   onLive,
 }: CameraControlsProps) {
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
-      {/* Stop camera */}
-      <button
-        onClick={onStop}
-        className="w-10 h-10 rounded-full glass flex items-center justify-center hover:bg-[var(--color-accent-error)]/20 transition-colors group"
-        title="Stop camera"
-        aria-label="Stop camera"
-      >
-        <div className="w-3.5 h-3.5 rounded-sm bg-[var(--color-accent-error)] group-hover:scale-110 transition-transform" />
+    <div className="dock" role="toolbar" aria-label="Camera controls">
+      <button onClick={onStop} className="dock-btn" data-tone="danger" title="Stop camera" aria-label="Stop camera">
+        <Icon name="stop" size={20} />
       </button>
 
-      {/* Mirror toggle */}
       <button
         onClick={onToggleMirror}
-        className={`w-10 h-10 rounded-full glass flex items-center justify-center transition-colors text-lg ${
-          mirror ? 'text-brand-400' : 'text-[var(--color-text-muted)]'
-        }`}
+        className="dock-btn"
+        aria-pressed={mirror}
         title={mirror ? 'Mirror on (M)' : 'Mirror off (M)'}
-        aria-label="Toggle mirror"
+        aria-label="Mirror the preview"
       >
-        ↔
+        <Icon name="flip" size={20} />
       </button>
 
-      {/* Snapshot -> realistic render */}
+      <span className="dock-sep" aria-hidden="true" />
+
       <button
         onClick={onSnapshot}
-        className="w-10 h-10 rounded-full glass flex items-center justify-center text-[var(--color-text-secondary)] hover:text-white transition-colors text-lg"
-        title="Realistic render of this moment (Space)"
-        aria-label="Realistic render"
+        className="btn-primary dock-render"
+        title="Make a full-resolution photo of this moment (Space)"
       >
-        📷
+        <Icon name="camera" size={19} />
+        Render photo
+        <kbd>Space</kbd>
       </button>
 
       {/* Live AI try-on (optional, third party). Only offered when the server enables it. */}
       {liveAvailable && (
-        <button
-          onClick={onLive}
-          className={`h-10 px-3 rounded-full glass flex items-center justify-center text-sm font-medium transition-colors ${
-            liveActive ? 'text-[var(--color-accent-error)]' : 'text-[var(--color-text-secondary)] hover:text-white'
-          }`}
-          title={liveActive ? 'Stop live AI try-on (L)' : 'Live AI try-on, sends video to a third party (L)'}
-          aria-label={liveActive ? 'Stop live AI try-on' : 'Start live AI try-on'}
-          aria-pressed={liveActive}
-        >
-          {liveActive ? '■ Live AI' : '✨ Live AI'}
-        </button>
+        <>
+          <span className="dock-sep" aria-hidden="true" />
+          <button
+            onClick={onLive}
+            className="dock-btn dock-live"
+            data-tone={liveActive ? 'danger' : undefined}
+            title={liveActive ? 'Stop live AI try-on (L)' : 'Live AI try-on sends your video to a third party (L)'}
+            aria-label={liveActive ? 'Stop live AI try-on' : 'Start live AI try-on'}
+            aria-pressed={liveActive}
+          >
+            <Icon name={liveActive ? 'stop' : 'sparkle'} size={18} />
+            Live AI
+          </button>
+        </>
       )}
     </div>
   );

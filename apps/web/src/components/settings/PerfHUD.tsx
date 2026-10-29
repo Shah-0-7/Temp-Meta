@@ -30,7 +30,7 @@ export function PerfHUD({ monitor }: PerfHUDProps) {
         : 'var(--color-accent-error)';
 
   return (
-    <div className="absolute top-3 left-3 glass rounded-xl px-3 py-2 text-xs font-mono select-none pointer-events-none">
+    <div className="absolute top-3 left-3 glass rounded-xl px-3 py-2 text-xs select-none pointer-events-none">
       <div className="flex flex-col gap-0.5">
         <div className="flex items-center gap-2">
           <span className="text-[var(--color-text-muted)] w-16">FPS</span>

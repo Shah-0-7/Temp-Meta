@@ -73,7 +73,7 @@ export function CameraView() {
   };
 
   return (
-    <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-[var(--color-surface-1)]">
+    <div className="stage stage-frame flex-1 flex items-center justify-center">
       {/* Canvas stays mounted; hidden until the camera is live. */}
       <div ref={stageRef} className={`relative w-full h-full ${active ? '' : 'hidden'}`}>
         <canvas
@@ -90,7 +90,7 @@ export function CameraView() {
         {starting && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-sm flex items-center gap-2 z-10">
             <div className="w-4 h-4 border-2 border-brand-400/30 border-t-brand-400 rounded-full animate-spin" />
-            <span className="text-[var(--color-text-secondary)]">Starting camera…</span>
+            <span className="text-[var(--color-text-secondary)]">Starting the camera…</span>
           </div>
         )}
 

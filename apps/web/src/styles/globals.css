@@ -1,155 +1,717 @@
 @import "tailwindcss";
 
 /* ----------------------------------------------------------------
-   TryAnywhere — Design Tokens & Global Styles
+   TryAnywhere: design tokens and global styles
+
+   Concept: a fitting room. The page is cool pattern paper; the camera
+   is a dark mirror set into it; panels are paper sheets laid over the
+   mirror. One colour is borrowed from the soft tape measure (yellow)
+   and used for the single main action on a screen.
+
+   Two colour contexts share the same token names:
+     - default (paper): ink text on pale paper
+     - .stage (mirror): pale text on a green-black surface
+   Components use the token names only, so they follow whichever
+   context they sit in.
    ---------------------------------------------------------------- */
 
-@theme {
-  /* Brand colors */
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-300: #a5b4fc;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
+@theme static {
+  /* Thread teal: secondary / active (paper context values) */
+  --color-brand-50: #eaf4f2;
+  --color-brand-100: #d3e8e4;
+  --color-brand-200: #a9d2cb;
+  --color-brand-300: #1b645c;
+  --color-brand-400: #1b645c;
+  --color-brand-500: #1d6a62;
+  --color-brand-600: #185a53;
+  --color-brand-700: #134943;
+  --color-brand-800: #0f3a35;
+  --color-brand-900: #0b2c28;
 
-  /* Surface colors (dark mode first) */
-  --color-surface-0: #0a0a0f;
-  --color-surface-1: #12121a;
-  --color-surface-2: #1a1a26;
-  --color-surface-3: #242433;
-  --color-surface-4: #2e2e40;
+  /* Surfaces (paper context) */
+  --color-surface-0: #e6ece9;
+  --color-surface-1: #f4f7f5;
+  --color-surface-2: #dce4e1;
+  --color-surface-3: #cbd6d2;
+  --color-surface-4: #b4c1bc;
 
-  /* Text */
-  --color-text-primary: #f0f0f5;
-  --color-text-secondary: #a0a0b8;
-  --color-text-muted: #8c8ca6; /* >= 4.5:1 on surface-0/1/2 (was #6b6b80, ~3.7:1) */
+  /* Text (paper context) */
+  --color-text-primary: #13211f;
+  --color-text-secondary: #3d4f4c;
+  --color-text-muted: #55665f;
 
-  /* Accent */
-  --color-accent-success: #22c55e;
-  --color-accent-warning: #f59e0b;
-  --color-accent-error: #ef4444;
-  --color-accent-info: #3b82f6;
+  /* Status (paper context, each >= 4.5:1 on paper and sheet) */
+  --color-accent-success: #17703a;
+  --color-accent-warning: #8a5200;
+  --color-accent-error: #b3261e;
+  --color-accent-info: #1d5fa8;
 
-  /* Glassmorphism */
-  --color-glass: rgba(255, 255, 255, 0.05);
-  --color-glass-border: rgba(255, 255, 255, 0.08);
-  --color-glass-hover: rgba(255, 255, 255, 0.1);
+  /* Quiet raised surfaces and hairlines */
+  --color-glass: rgba(19, 33, 31, 0.05);
+  --color-glass-border: rgba(19, 33, 31, 0.18);
+  --color-glass-hover: rgba(19, 33, 31, 0.1);
 
-  /* Shadows */
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
-  --shadow-glow-lg: 0 0 40px rgba(99, 102, 241, 0.25);
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  /* Fixed colours (same in both contexts) */
+  --color-ink: #13211f;
+  --color-paper: #e6ecea;
+  --color-tape: #f4c20d;
+  --color-tape-hover: #ffd43b;
 
-  /* Font */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --shadow-sheet: 0 0 0 1px rgba(19, 33, 31, 0.12), 0 22px 56px rgba(6, 13, 12, 0.38);
 
-  /* Transitions */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Type */
+  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Young Serif', Georgia, 'Times New Roman', serif;
+}
+
+/* The mirror: same names, dark values. */
+.stage {
+  color-scheme: dark;
+
+  --color-brand-300: #9adbcf;
+  --color-brand-400: #7ccbbe;
+  --color-brand-500: #237a70;
+  --color-brand-600: #1d6a62;
+
+  --color-surface-0: #0b1211;
+  --color-surface-1: #101918;
+  --color-surface-2: #172423;
+  --color-surface-3: #20312f;
+  --color-surface-4: #2c4240;
+
+  --color-text-primary: #eef3f1;
+  --color-text-secondary: #b9c8c4;
+  --color-text-muted: #96a8a4;
+
+  --color-accent-success: #4bd37f;
+  --color-accent-warning: #f5b93a;
+  --color-accent-error: #ff7566;
+  --color-accent-info: #7db4f5;
+
+  --color-glass: rgba(11, 18, 17, 0.72);
+  --color-glass-border: rgba(255, 255, 255, 0.16);
+  --color-glass-hover: rgba(34, 52, 50, 0.88);
+
+  background: var(--color-surface-1);
+  color: var(--color-text-primary);
 }
 
 /* ----------------------------------------------------------------
    Base
    ---------------------------------------------------------------- */
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-html {
-  color-scheme: dark;
-}
+  html {
+    color-scheme: light;
+  }
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--font-sans);
-  background: var(--color-surface-0);
-  color: var(--color-text-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
-  height: 100dvh;
-}
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    background: var(--color-surface-0);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+    height: 100dvh;
+  }
 
-#root {
-  height: 100dvh;
-  display: flex;
-  flex-direction: column;
+  #root {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+  }
+
+  kbd {
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1;
+    padding: 3px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--color-glass-border);
+    border-bottom-width: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-surface-4);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-400);
+    outline-offset: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+  /* Dialogs take focus programmatically; no ring on the container itself. */
+  [role='dialog']:focus,
+  [role='alertdialog']:focus {
+    outline: none;
+  }
 }
 
 /* ----------------------------------------------------------------
-   Glass card utility
+   Components
+   (in the components layer so Tailwind utilities can still adjust them)
    ---------------------------------------------------------------- */
 
-.glass {
-  background: var(--color-glass);
-  border: 1px solid var(--color-glass-border);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
+@layer components {
+  /* Quiet raised surface. On the mirror it is a dark pane over the video. */
+  .glass {
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-border);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  button.glass:hover:not(:disabled),
+  label.glass:hover,
+  a.glass:hover {
+    background: var(--color-glass-hover);
+  }
 
-.glass:hover {
-  background: var(--color-glass-hover);
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+  }
+
+  /* ---- Top bar ---- */
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px 12px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    background: var(--color-ink);
+    color: var(--color-tape);
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--color-glass-border);
+    background: transparent;
+    color: var(--color-text-primary);
+    font: 600 14px/1 var(--font-sans);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .tool:hover {
+    background: var(--color-glass-hover);
+  }
+  .tool[aria-pressed='true'] {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .tool-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--color-surface-2);
+  }
+  .tool-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    background: var(--color-tape);
+    color: var(--color-ink);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-accent-warning);
+  }
+  .status-dot[data-state='ready'] {
+    background: var(--color-accent-success);
+  }
+  .status-dot[data-state='error'] {
+    background: var(--color-accent-error);
+  }
+  .status-dot[data-state='busy'] {
+    animation: status-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* ---- Footer ---- */
+
+  .footbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 20px 12px;
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+  }
+  .footbar-keys {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .footbar-keys span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ---- Buttons ---- */
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--color-tape);
+    color: var(--color-ink);
+    font-weight: 700;
+    border: 0;
+    cursor: pointer;
+    box-shadow: inset 0 -2px 0 rgba(19, 33, 31, 0.22);
+    transition: background-color 0.15s, transform 0.08s;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-tape-hover);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: none;
+  }
+  .btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    border: 1px solid var(--color-glass-border);
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .btn-outline:hover {
+    background: var(--color-glass-hover);
+  }
+
+  .btn-lg {
+    height: 48px;
+    padding: 0 22px;
+    border-radius: 999px;
+    font-size: 16px;
+  }
+
+  .link-quiet {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--color-brand-300);
+    font: 600 14px/1.4 var(--font-sans);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .link-quiet:hover {
+    color: var(--color-text-primary);
+  }
+
+  /* ---- Paper sheets (panels and dialogs over the mirror) ---- */
+
+  .sheet {
+    background: var(--color-surface-1);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-sheet);
+  }
+  .sheet-left {
+    border-radius: 0 22px 22px 0;
+  }
+  .sheet-right {
+    border-radius: 22px 0 0 22px;
+  }
+  .sheet-modal {
+    border-radius: 22px;
+  }
+  .sheet-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+  }
+  .sheet-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--color-glass-border);
+  }
+  .sheet-sub {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+  .field-title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  /* Dark panel for modals that sit inside the mirror. */
+  .panel-dark {
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-glass-border);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  }
+
+  /* ---- The mirror ---- */
+
+  .stage-frame {
+    position: relative;
+    margin: 0 14px 14px;
+    border-radius: 22px;
+    overflow: hidden;
+  }
+  /* Registration marks in the corners, like a pattern sheet. */
+  .stage-frame::after {
+    content: '';
+    position: absolute;
+    inset: 14px;
+    pointer-events: none;
+    z-index: 1;
+    --m: rgba(238, 243, 241, 0.4);
+    background:
+      linear-gradient(var(--m), var(--m)) top left / 20px 1.5px no-repeat,
+      linear-gradient(var(--m), var(--m)) top left / 1.5px 20px no-repeat,
+      linear-gradient(var(--m), var(--m)) top right / 20px 1.5px no-repeat,
+      linear-gradient(var(--m), var(--m)) top right / 1.5px 20px no-repeat,
+      linear-gradient(var(--m), var(--m)) bottom left / 20px 1.5px no-repeat,
+      linear-gradient(var(--m), var(--m)) bottom left / 1.5px 20px no-repeat,
+      linear-gradient(var(--m), var(--m)) bottom right / 20px 1.5px no-repeat,
+      linear-gradient(var(--m), var(--m)) bottom right / 1.5px 20px no-repeat;
+  }
+
+  /* ---- Camera controls ---- */
+
+  .dock {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 12;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px;
+    border-radius: 999px;
+    background: rgba(8, 14, 13, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+  .dock-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .dock-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+  .dock-btn[aria-pressed='true'] {
+    color: var(--color-brand-300);
+  }
+  .dock-btn[data-tone='danger'] {
+    color: var(--color-accent-error);
+  }
+  .dock-live {
+    width: auto;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font: 600 14px/1 var(--font-sans);
+  }
+  .dock-render {
+    height: 42px;
+    padding: 0 18px 0 16px;
+    border-radius: 999px;
+    font-size: 15px;
+  }
+  .dock-render kbd {
+    border-color: rgba(19, 33, 31, 0.35);
+    background: rgba(19, 33, 31, 0.1);
+    color: var(--color-ink);
+  }
+  .dock-sep {
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.16);
+    margin: 0 2px;
+  }
+
+  /* ---- First screen: the pattern drawing ---- */
+
+  .hero {
+    width: 100%;
+    height: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+    gap: 56px;
+    align-items: center;
+    overflow-y: auto;
+  }
+  .hero-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(2.3rem, 4.6vw, 3.7rem);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    max-width: 14ch;
+  }
+  .hero-copy {
+    margin: 0;
+    max-width: 32rem;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-note {
+    margin: 0;
+    max-width: 30rem;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+  }
+  .hero-art {
+    width: 100%;
+    max-height: 100%;
+    aspect-ratio: 420 / 540;
+    justify-self: center;
+  }
+  .hero-art svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .pattern-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: pattern-draw 1.9s 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  .pattern-fade {
+    opacity: 0;
+    animation: pattern-fade 0.7s 1.5s ease-out forwards;
+  }
+
+  /* Centered states (requesting, denied, error) */
+  .state {
+    width: 100%;
+    height: 100%;
+    max-width: 30rem;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16px;
+  }
+  .state-title {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .state-steps {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+  }
+
+  @media (max-width: 860px) {
+    .hero {
+      grid-template-columns: 1fr;
+      gap: 24px;
+      padding: 24px 20px;
+      align-content: start;
+    }
+    .hero-art {
+      max-width: 170px;
+      justify-self: start;
+      order: -1;
+    }
+    .topbar {
+      padding: 10px 12px;
+    }
+    .tool-label,
+    .status-text {
+      display: none;
+    }
+    .footbar-keys {
+      display: none;
+    }
+    .brand {
+      flex: 1 1 auto;
+    }
+    .wordmark {
+      font-size: 1.1rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .status {
+      display: none;
+    }
+    .topbar-actions {
+      flex: none;
+      gap: 6px;
+    }
+    .tool {
+      padding: 0 11px;
+    }
+    .icon-btn,
+    .tool:has(.tool-count) {
+      min-width: 38px;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------
-   Scrollbar
+   Motion
    ---------------------------------------------------------------- */
 
-::-webkit-scrollbar {
-  width: 6px;
+@keyframes pattern-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
-
-::-webkit-scrollbar-track {
-  background: transparent;
+@keyframes pattern-fade {
+  to {
+    opacity: 1;
+  }
 }
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-surface-4);
-  border-radius: 3px;
+@keyframes status-pulse {
+  50% {
+    opacity: 0.35;
+  }
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
-}
-
-/* ----------------------------------------------------------------
-   Reduced motion
-   ---------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-/* ----------------------------------------------------------------
-   Keyboard focus
-   ---------------------------------------------------------------- */
-
-:focus-visible {
-  outline: 2px solid var(--color-brand-300);
-  outline-offset: 2px;
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Dialogs take focus programmatically; no ring on the container itself. */
-[role="dialog"]:focus {
-  outline: none;
-}
-
-kbd {
-  font-family: inherit;
 }

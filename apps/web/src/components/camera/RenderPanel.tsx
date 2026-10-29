@@ -10,6 +10,7 @@ import { useRealisticRender } from '../../hooks/useRealisticRender';
 import { useGarmentStore } from '../../stores/garmentStore';
 import { useSnapshotStore } from '../../stores/snapshotStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { Icon } from '../ui/Icon';
 
 export function RenderPanel() {
   const s = useRenderStore();
@@ -39,16 +40,12 @@ export function RenderPanel() {
         role="dialog"
         aria-modal="true"
         aria-label="Realistic render"
-        className="glass rounded-2xl max-w-4xl w-full max-h-full overflow-auto p-4 flex flex-col gap-3 outline-none"
+        className="panel-dark rounded-[22px] max-w-4xl w-full max-h-full overflow-auto p-5 flex flex-col gap-4 outline-none"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">Realistic render</h2>
-          <button
-            onClick={s.close}
-            className="w-8 h-8 rounded-lg glass text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-            aria-label="Close"
-          >
-            ✕
+          <h2 className="sheet-title">Your photo</h2>
+          <button onClick={s.close} className="tool icon-btn" aria-label="Close">
+            <Icon name="close" size={18} />
           </button>
         </div>
 
@@ -62,12 +59,12 @@ export function RenderPanel() {
                     s.close();
                     useGarmentStore.getState().setGarmentPanelOpen(true);
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm"
+                  className="btn-primary px-3.5 py-2 rounded-xl text-sm"
                 >
                   Choose a garment
                 </button>
               )}
-              <button onClick={() => void render()} className="px-3 py-1.5 rounded-lg glass text-sm">
+              <button onClick={() => void render()} className="glass px-3.5 py-2 rounded-xl text-sm font-medium">
                 Try again
               </button>
             </div>
@@ -132,12 +129,24 @@ export function RenderPanel() {
         )}
 
         {s.status === 'done' && (
-          <p className="text-xs text-[var(--color-text-muted)]">
-            {s.provider === 'local' ? 'Rendered on your device. Nothing was uploaded.' : `Rendered by ${s.provider}.`}
-            {s.elapsedMs !== null && ` ${(s.elapsedMs / 1000).toFixed(1)} s.`}
-            {s.provider === 'local' &&
-              ' It re-renders your frame at full resolution; it cannot repaint clothes you are already wearing. Connect the Meta Model API for AI photorealism.'}
-          </p>
+          <div className="text-sm text-[var(--color-text-secondary)] flex flex-col gap-1">
+            {/* A note explains anything the person could not see for themselves (for example, why the
+                on-device render was used). Without one, a local render never left the device. */}
+            <p className="m-0">
+              {s.note
+                ? s.note
+                : s.provider === 'local'
+                  ? 'Made on your device. Nothing was uploaded.'
+                  : `Made by ${s.provider}.`}
+              {s.elapsedMs !== null && ` Took ${(s.elapsedMs / 1000).toFixed(1)} s.`}
+            </p>
+            {s.provider === 'local' && (
+              <p className="m-0 text-[var(--color-text-muted)]">
+                The on-device render redraws your frame at full resolution. It cannot repaint clothes you are already
+                wearing. Turn on the AI render on the server for a generated image.
+              </p>
+            )}
+          </div>
         )}
 
         <div className="flex gap-2 justify-end items-center">
@@ -147,7 +156,7 @@ export function RenderPanel() {
                 s.close();
                 useSnapshotStore.getState().setOpen(true);
               }}
-              className="mr-auto px-3 py-2 rounded-xl glass text-sm"
+              className="glass mr-auto px-4 py-2 rounded-xl text-sm font-medium"
             >
               Open gallery ({savedCount})
             </button>
@@ -155,14 +164,14 @@ export function RenderPanel() {
           <button
             onClick={() => void render()}
             disabled={busy}
-            className="px-4 py-2 rounded-xl glass text-sm disabled:opacity-50"
+            className="glass px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
           >
             Retake
           </button>
           <button
             onClick={download}
             disabled={!s.afterUrl}
-            className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium disabled:opacity-50"
+            className="btn-primary px-4 py-2 rounded-xl text-sm"
           >
             Download PNG
           </button>

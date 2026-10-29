@@ -75,3 +75,11 @@ Run in desktop Chrome with a real webcam. Tick each box; note the browser, machi
 - [ ] Session stops at the time limit, when the tab is hidden, and when the camera is stopped
 - [ ] Changing the garment while live swaps it without reconnecting
 - [ ] `/api/token` called repeatedly is rate limited; the response never contains the permanent key
+
+## Look and feel (check once in a real browser)
+
+- [ ] Young Serif and Hanken Grotesk load (the wordmark and headings are serif, the interface is sans). Offline, system fonts take over and the layout should still hold.
+- [ ] First screen: the pattern drawing animates in once, then stays. With "reduce motion" on, it appears already drawn.
+- [ ] Garment, settings, gallery, help and consent are opaque paper, readable over the camera.
+- [ ] Phone width (about 390 px): header fits without overlap, nothing scrolls sideways.
+- [ ] Keyboard: Tab shows a visible ring on every control, and the closed garment panel is skipped.

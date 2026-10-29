@@ -58,7 +58,7 @@ export function PoseHint({ trackingReady }: PoseHintProps) {
       {offerGarment && (
         <button
           onClick={() => useGarmentStore.getState().setGarmentPanelOpen(true)}
-          className="ml-3 px-2.5 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium"
+          className="btn-primary ml-3 px-3 py-1 rounded-full text-xs"
         >
           Choose garment
         </button>

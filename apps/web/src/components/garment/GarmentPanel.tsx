@@ -9,6 +9,7 @@ import { URLInput } from './URLInput';
 import { CandidateGrid } from './CandidateGrid';
 import { SampleGarments } from './SampleGarments';
 import { useGarmentStore } from '../../stores/garmentStore';
+import { Icon } from '../ui/Icon';
 
 export function GarmentPanel() {
   const { garmentPanelOpen, selectedGarment, clearGarment, setGarmentPanelOpen, candidates } =
@@ -26,24 +27,25 @@ export function GarmentPanel() {
 
       {/* Panel */}
       <div
-        className={`absolute top-0 bottom-0 left-0 w-80 glass border-r border-[var(--color-glass-border)] z-20 flex flex-col overflow-hidden transition-transform duration-300 ${
-          garmentPanelOpen ? 'translate-x-0' : '-translate-x-full'
+        // Closed: slid off-screen, no shadow leaking onto the mirror, and out of the tab order.
+        inert={!garmentPanelOpen}
+        aria-hidden={!garmentPanelOpen}
+        className={`sheet sheet-left absolute top-0 bottom-0 left-0 w-[22rem] max-w-[92vw] z-20 flex flex-col overflow-hidden transition-transform duration-300 ${
+          garmentPanelOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-glass-border)] shrink-0">
+        <div className="sheet-head shrink-0">
           <div>
-            <h2 className="text-base font-semibold">Choose Garment</h2>
-            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              Paste a URL or upload an image
-            </p>
+            <h2 className="sheet-title">Choose a garment</h2>
+            <p className="sheet-sub">Paste a product link or upload a photo.</p>
           </div>
           <button
             onClick={() => setGarmentPanelOpen(false)}
-            className="w-7 h-7 rounded-lg glass flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors text-sm"
+            className="tool icon-btn"
             aria-label="Close garment panel"
           >
-            ✕
+            <Icon name="close" size={18} />
           </button>
         </div>
 
@@ -60,13 +62,13 @@ export function GarmentPanel() {
 
           {/* Empty state */}
           {candidates.length === 0 && (
-            <div className="flex flex-col items-center gap-3 py-8 text-center">
-              <div className="text-4xl opacity-50">🔍</div>
-              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                Paste a product URL from any store to discover garment images automatically.
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Works with Amazon, ASOS, Zara, H&M, and more.
+            <div className="flex flex-col items-start gap-2 py-4">
+              <span className="text-[var(--color-text-muted)]">
+                <Icon name="search" size={22} />
+              </span>
+              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed m-0">
+                Paste a product link and the garment photos on that page appear here. Pick the one that shows the
+                garment on its own.
               </p>
             </div>
           )}
@@ -74,7 +76,7 @@ export function GarmentPanel() {
 
         {/* Selected garment footer */}
         {selectedGarment && (
-          <div className="shrink-0 border-t border-[var(--color-glass-border)] p-4 flex items-center gap-3">
+          <div className="shrink-0 border-t border-[var(--color-glass-border)] p-4 flex items-center gap-3 bg-[var(--color-surface-2)]">
             <img
               src={selectedGarment.proxyUrl ?? selectedGarment.url}
               alt={selectedGarment.alt ?? 'Selected garment'}
@@ -85,16 +87,16 @@ export function GarmentPanel() {
                 {selectedGarment.alt ?? selectedGarment.garmentType ?? 'Garment selected'}
               </p>
               {selectedGarment.garmentType && (
-                <p className="text-xs text-brand-400 capitalize">{selectedGarment.garmentType}</p>
+                <p className="text-xs text-brand-400 font-medium capitalize">{selectedGarment.garmentType}</p>
               )}
             </div>
             <button
               onClick={clearGarment}
-              className="w-7 h-7 rounded-lg glass flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-accent-error)] transition-colors text-sm shrink-0"
+              className="tool icon-btn shrink-0"
               aria-label="Remove selected garment"
               title="Remove garment"
             >
-              ✕
+              <Icon name="close" size={18} />
             </button>
           </div>
         )}

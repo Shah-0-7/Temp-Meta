@@ -7,6 +7,7 @@
  */
 
 import { useGarmentStore } from '../../stores/garmentStore';
+import { Icon } from '../ui/Icon';
 
 export function CandidateGrid() {
   const { candidates, selectedIndex, selectCandidate, pageTitle } = useGarmentStore();
@@ -17,12 +18,12 @@ export function CandidateGrid() {
     <div className="flex flex-col gap-3">
       {pageTitle && (
         <p className="text-xs text-[var(--color-text-muted)] truncate" title={pageTitle}>
-          📄 {pageTitle}
+          {pageTitle}
         </p>
       )}
 
-      <p className="text-xs text-[var(--color-text-secondary)]">
-        {candidates.length} image{candidates.length !== 1 ? 's' : ''} found — click to select
+      <p className="field-title !mb-0">
+        {candidates.length} image{candidates.length !== 1 ? 's' : ''} found. Pick one.
       </p>
 
       <div className="grid grid-cols-3 gap-2">
@@ -56,21 +57,21 @@ export function CandidateGrid() {
 
               {/* Selected check */}
               {isSelected && (
-                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center text-white text-[10px] font-bold">
-                  ✓
+                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center text-white">
+                  <Icon name="check" size={12} strokeWidth={3} />
                 </div>
               )}
 
               {/* Score badge */}
               {typeof candidate.score === 'number' && (
-                <div className="absolute bottom-1 left-1 px-1 py-0.5 rounded text-[9px] font-mono bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute bottom-1 left-1 px-1 py-0.5 rounded text-[10px] tabular-nums bg-black/65 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   {(candidate.score * 100).toFixed(0)}%
                 </div>
               )}
 
               {/* Garment type tag */}
               {candidate.garmentType && (
-                <div className="absolute bottom-1 right-1 px-1 py-0.5 rounded text-[9px] bg-brand-600/80 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute bottom-1 right-1 px-1 py-0.5 rounded text-[10px] bg-brand-600 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   {candidate.garmentType}
                 </div>
               )}
@@ -84,7 +85,7 @@ export function CandidateGrid() {
 
       {candidates.length > 9 && (
         <p className="text-xs text-[var(--color-text-muted)] text-center">
-          Showing top 9 of {candidates.length} images
+          Showing the top 9 of {candidates.length} images.
         </p>
       )}
     </div>

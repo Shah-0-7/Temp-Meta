@@ -9,6 +9,7 @@ import { useRef } from 'react';
 import { useSnapshotStore, type Snapshot } from '../../stores/snapshotStore';
 import { useRenderStore } from '../../stores/renderStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { Icon } from '../ui/Icon';
 
 function download(url: string, name: string): void {
   const a = document.createElement('a');
@@ -52,15 +53,15 @@ export function GalleryPanel() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="gallery-title"
-        className="glass rounded-2xl max-w-5xl w-full max-h-full overflow-auto p-4 flex flex-col gap-3 outline-none"
+        className="sheet sheet-modal max-w-5xl w-full max-h-full overflow-auto p-5 flex flex-col gap-4 outline-none"
       >
         <div className="flex items-center justify-between gap-2">
-          <h2 id="gallery-title" className="text-base font-semibold">
-            {view === 'compare' ? 'Compare outfits' : `Gallery (${snapshots.length})`}
+          <h2 id="gallery-title" className="sheet-title">
+            {view === 'compare' ? 'Compare outfits' : `Gallery, ${snapshots.length} saved`}
           </h2>
           <div className="flex items-center gap-2">
             {view === 'compare' ? (
-              <button onClick={() => setView('grid')} className="px-3 py-1.5 rounded-lg glass text-sm">
+              <button onClick={() => setView('grid')} className="tool">
                 Back to gallery
               </button>
             ) : (
@@ -68,13 +69,13 @@ export function GalleryPanel() {
                 <button
                   onClick={() => setView('compare')}
                   disabled={!canCompare}
-                  className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-primary px-4 py-2 rounded-full text-sm"
                   title={canCompare ? 'Compare the two selected outfits' : 'Tick two snapshots to compare'}
                 >
                   Compare{selected.length ? ` (${selected.length}/2)` : ''}
                 </button>
                 {snapshots.length > 0 && (
-                  <button onClick={clear} className="px-3 py-1.5 rounded-lg glass text-sm">
+                  <button onClick={clear} className="tool">
                     Delete all
                   </button>
                 )}
@@ -82,20 +83,20 @@ export function GalleryPanel() {
             )}
             <button
               onClick={() => setOpen(false)}
-              className="w-8 h-8 rounded-lg glass text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+              className="tool icon-btn"
               aria-label="Close gallery"
             >
-              ✕
+              <Icon name="close" size={18} />
             </button>
           </div>
         </div>
 
         {snapshots.length === 0 && (
-          <div className="rounded-xl p-8 text-center text-sm text-[var(--color-text-secondary)] bg-black/20">
+          <div className="rounded-xl p-8 text-sm text-[var(--color-text-secondary)] bg-[var(--color-surface-2)]">
             <p className="font-medium text-[var(--color-text-primary)]">No snapshots yet</p>
             <p className="mt-1">
-              Press <kbd className="px-1.5 py-0.5 rounded glass text-xs">Space</kbd> while the camera is on to make a
-              realistic render. Each render is saved here for this session.
+              Press <kbd>Space</kbd> while the camera is on to render a photo. Each render is saved here until you
+              close or reload the tab.
             </p>
           </div>
         )}
@@ -106,7 +107,7 @@ export function GalleryPanel() {
               <figure key={s.id} className="flex flex-col gap-2 m-0">
                 <img src={s.afterUrl} alt={`Try-on: ${s.garmentLabel}`} className="w-full rounded-xl bg-black" />
                 <figcaption className="text-sm text-[var(--color-text-secondary)]">
-                  {s.garmentLabel} · {time(s)}
+                  {s.garmentLabel}, {time(s)}
                 </figcaption>
               </figure>
             ))}
@@ -131,7 +132,7 @@ export function GalleryPanel() {
                   </button>
                   <div className="p-2 flex flex-col gap-2">
                     <p className="text-xs text-[var(--color-text-secondary)] truncate" title={s.garmentLabel}>
-                      {s.garmentLabel} · {time(s)}
+                      {s.garmentLabel}, {time(s)}
                     </p>
                     <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                       <input
@@ -145,14 +146,14 @@ export function GalleryPanel() {
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => download(s.afterUrl, fileName(s))}
-                        className="flex-1 px-2 py-1 rounded-lg glass text-xs"
+                        className="glass flex-1 px-2 py-1.5 rounded-lg text-xs font-medium"
                         aria-label={`Download ${s.garmentLabel} render`}
                       >
                         Download
                       </button>
                       <button
                         onClick={() => remove(s.id)}
-                        className="px-2 py-1 rounded-lg glass text-xs hover:text-[var(--color-accent-error)]"
+                        className="glass px-2 py-1.5 rounded-lg text-xs font-medium hover:text-[var(--color-accent-error)]"
                         aria-label={`Delete ${s.garmentLabel} render`}
                       >
                         Delete
@@ -166,7 +167,7 @@ export function GalleryPanel() {
         )}
 
         <p className="text-xs text-[var(--color-text-muted)]">
-          Snapshots stay in this browser tab&apos;s memory only. They are never uploaded or saved, and disappear when you reload.
+          Snapshots stay in this tab&apos;s memory. They are not saved anywhere and disappear when you reload.
         </p>
       </div>
     </div>

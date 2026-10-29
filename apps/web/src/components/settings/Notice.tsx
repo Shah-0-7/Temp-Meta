@@ -26,10 +26,10 @@ export function Notice() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-14 left-1/2 -translate-x-1/2 z-40 glass rounded-xl px-4 py-2 text-sm max-w-[90%] flex items-center gap-3"
+      className="sheet fixed bottom-14 left-1/2 -translate-x-1/2 z-40 rounded-2xl px-4 py-2.5 text-sm max-w-[90%] flex items-center gap-3"
     >
-      <span className="text-[var(--color-text-secondary)]">{notice.text}</span>
-      <button onClick={clear} className="px-2 py-1 rounded-lg glass text-xs" aria-label="Dismiss message">
+      <span className="text-[var(--color-text-primary)]">{notice.text}</span>
+      <button onClick={clear} className="glass px-3 py-1 rounded-full text-xs font-semibold" aria-label="Dismiss message">
         OK
       </button>
     </div>
