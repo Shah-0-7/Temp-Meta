@@ -33,22 +33,32 @@ Updated as development progresses.
 - Download as PNG, before/after compare slider, and a "upload a photo" fallback
 
 ### What it cannot do
-- **Cannot repaint what you are wearing.** Your own sleeves or collar can peek out around the garment. A plain, fitted top works best. Meta Muse Image removes this limitation once connected.
+- **Cannot repaint what you are wearing.** Your own sleeves or collar can peek out around the garment. A plain, fitted top works best. The optional free AI render (Leffa) repaints the garment instead, which avoids this.
 - **No generated folds.** Creases come from your own clothes via lighting transfer, not from simulated fabric.
 - **Front view only.** Turn to face the camera; the app tells you when you are turned.
-- **Cut-out limits.** White garments on white backgrounds, or stripes touching the garment edge, can be cut by the flood-fill segmenter. Use manual select, or Meta SAM once connected.
+- **Cut-out limits.** White garments on white backgrounds, or stripes touching the garment edge, can be cut by the flood-fill segmenter. Use manual select, or a model-based segmenter once one is connected.
 
-## Tier B — Realistic Photo (Meta Muse Image, server-side generation, not yet connected)
+## Tier B — Realistic Photo (on-device by default; optional free AI model)
 
 ### What it can do
-- Photorealistic try-on using Meta Muse Image
+- Photorealistic try-on using the optional free AI model (Leffa), when the server enables it
 - Natural drape, folds, creases that match the person's pose and body
 - Preserves face, identity, background, and lighting
 
 ### What it cannot do
-- **Not real-time.** Generation takes 2–5 seconds per image.
+- **Not real-time.** The on-device render takes a few seconds. The free AI model queues on a shared GPU and can take well over a minute.
 - **Occasional artifacts.** AI generation may alter small details (logos, text on garments) or produce minor inconsistencies.
 - **One garment at a time.** Multi-garment try-on (e.g., top + bottom) is not supported yet.
+
+## Free AI render (Leffa on a Hugging Face Space)
+
+- **Never run against the live Space.** It was written from the Space's source code and Hugging Face's API docs. Two details are unconfirmed: the endpoint name (`leffa_predict_vt`, Gradio's default because the Space sets none) and the upload step. `pnpm check:free-tryon` confirms both. If the Space has changed or sleeps, the app falls back to the on-device render.
+- **Small, shared free quota.** Hugging Face documents 2 minutes of GPU a day for anonymous callers and 5 with a free account. Expect "busy or out of quota" fallbacks. Use `HF_TOKEN` or duplicate the Space for anything beyond a demo.
+- **Your photo goes to a third-party service**, and this app cannot control what that service keeps. Consent is asked every session.
+- **Tops and jackets only.** Bottoms, dresses and accessories are refused by the server because only the upper-body option was confirmed.
+- **Output framing is the model's.** Leffa works on portrait images, so a wide webcam frame may come back cropped or padded. Not yet checked.
+- **Garment accuracy.** Prints, logos and fine detail can differ from the real garment; the result is labelled as AI-generated.
+- **No refinement and no segmentation or understanding from this model.**
 
 ## Tier C: live AI try-on (Decart, optional)
 
@@ -63,7 +73,7 @@ Updated as development progresses.
 ## General
 
 - **Deployed site has no server by default.** A production build only contacts an API if `VITE_API_URL` is set. On the Cloudflare static deploy, product-link lookup and Live AI are unavailable (upload and samples work).
-- **Meta models are not connected.** SAM 3.1, Muse Spark and Muse Image are not wired in yet (milestone M6). The server's `/api/generate` is a stub, so Realistic render always uses the on-device renderer. Early Meta client work exists on the unpushed branch `m6-meta-wip`.
+- **Meta models are not connected.** SAM 3.1, Muse Spark and Muse Image are not wired in. Early Meta client work exists on the unpushed branch `m6-meta-wip`. Segmentation and image understanding use the on-device defaults.
 - **No click/box manual cut-out.** If the automatic cut-out is wrong you can pick another image, upload a cleaner photo, or use a sample. A click-to-select refinement is not built.
 - **Sample garments are synthetic** drawings made for this project; they exist for first-run demos, not as a product catalogue.
 - **Gallery is session-only.** Snapshots are not saved anywhere and are lost on reload. Download the ones you want.

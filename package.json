@@ -16,7 +16,8 @@
     "typecheck": "tsc --build",
     "setup:assets": "node scripts/setup-assets.mjs",
     "check:setup": "node scripts/check-setup.mjs",
-    "postinstall": "node scripts/setup-assets.mjs || true"
+    "postinstall": "node scripts/setup-assets.mjs || true",
+    "check:free-tryon": "pnpm --filter @tryanywhere/server exec tsx scripts/check-free-tryon.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

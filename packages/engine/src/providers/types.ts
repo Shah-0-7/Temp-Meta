@@ -45,6 +45,8 @@ export interface Provider {
   readonly name: string;
   /** Capabilities this provider implements */
   readonly capabilities: readonly ProviderCapability[];
+  /** True when using this provider sends the person's images to a third party. The UI must ask first. */
+  readonly sendsDataOffDevice?: boolean;
   /** One-time setup (load models, warm up connections) */
   initialize(): Promise<void>;
   /** Release resources */

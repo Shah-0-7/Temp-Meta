@@ -16,9 +16,30 @@ import { resolveProductUrl } from './services/urlResolver.js';
 import { verifyProxySignature, proxyImage } from './services/imageProxy.js';
 import { SSRFError } from './services/ssrfGuard.js';
 import { handleToken, RateLimiter } from './services/realtimeToken.js';
+import { handleGenerate, LeffaSpaceBackend, type TryOnBackend } from './services/freeTryOn.js';
+import { GradioClient } from './services/gradioClient.js';
 
 const config = loadConfig();
 const app = new Hono();
+
+/** The free hosted model, when configured. A bad Space URL disables it instead of crashing the server. */
+function createFreeBackend(): TryOnBackend | null {
+  if (!config.freeTryOn.enabled) return null;
+  try {
+    return new LeffaSpaceBackend({
+      client: new GradioClient({
+        baseUrl: config.freeTryOn.spaceUrl,
+        token: config.freeTryOn.hfToken,
+        timeoutMs: config.freeTryOn.timeoutMs,
+      }),
+      apiName: config.freeTryOn.apiName,
+    });
+  } catch (err) {
+    console.error('[generate] free try-on disabled:', (err as Error).message);
+    return null;
+  }
+}
+const freeBackend = createFreeBackend();
 
 // ---------------------------------------------------------------------------
 // Middleware
@@ -49,6 +70,9 @@ app.get('/api/health', (c) =>
       realtimeModel: config.decart.model,
       realtimeMaxSessionSeconds: config.decart.maxSessionSeconds,
       metaConfigured: !!config.meta.apiKey,
+      // The browser registers the remote generator only when this is true.
+      remoteTryOn: !!freeBackend,
+      remoteTryOnLabel: freeBackend?.label ?? '',
     },
   }),
 );
@@ -144,11 +168,18 @@ app.get('/api/proxy', async (c) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/generate — Tier B (M5)
+// POST /api/generate: Tier B realistic photo via a free hosted model (M6)
 // ---------------------------------------------------------------------------
 
+const generateLimiter = new RateLimiter(config.rateLimit.generateRPM);
+
 app.post('/api/generate', (c) =>
-  c.json({ error: 'Not implemented yet — coming in M5' }, 501),
+  handleGenerate(c.req.raw, {
+    enabled: !!freeBackend,
+    backend: freeBackend,
+    limiter: generateLimiter,
+    maxConcurrent: config.freeTryOn.maxConcurrent,
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -177,7 +208,7 @@ console.log(`
 ║  TryAnywhere API Server                  ║
 ║  Port: ${String(config.port).padEnd(33)}║
 ║  Env:  ${config.nodeEnv.padEnd(33)}║
-║  Meta: ${(config.meta.apiKey ? 'configured' : 'not configured').padEnd(33)}║
+║  AI:   ${(freeBackend ? 'free model (Leffa Space)' : 'off (on-device only)').padEnd(33)}║
 ╚══════════════════════════════════════════╝
 `);
 

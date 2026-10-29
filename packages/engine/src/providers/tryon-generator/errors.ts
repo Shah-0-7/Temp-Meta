@@ -11,3 +11,11 @@ export class PoseModelUnavailableError extends Error {
     if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
   }
 }
+
+/** The person chose not to send their photo to an online service. Not a failure: callers use the on-device render. */
+export class ConsentDeclinedError extends Error {
+  constructor() {
+    super('Sending the photo to the AI service was declined.');
+    this.name = 'ConsentDeclinedError';
+  }
+}

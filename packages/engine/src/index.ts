@@ -153,7 +153,13 @@ export type {
   LocalTryOnGeneratorOptions,
   StillAnalyzerFn,
 } from './providers/tryon-generator/LocalTryOnGenerator.js';
-export { PoseModelUnavailableError } from './providers/tryon-generator/errors.js';
+export { PoseModelUnavailableError, ConsentDeclinedError } from './providers/tryon-generator/errors.js';
+export {
+  RemoteTryOnGenerator,
+  RemoteTryOnError,
+  type RemoteTryOnOptions,
+} from './providers/tryon-generator/RemoteTryOnGenerator.js';
+export { FallbackTryOnGenerator, fallbackReason } from './providers/tryon-generator/FallbackTryOnGenerator.js';
 export { createAppRegistry } from './providers/defaults.js';
 
 

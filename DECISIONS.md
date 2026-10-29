@@ -161,3 +161,18 @@ Each entry records what was decided, why, and any alternatives considered.
 **Decision:** `wrangler.jsonc` at the repo root deploys `apps/web/dist` as SPA static assets. In production builds `API_BASE` is empty unless `VITE_API_URL` is set, and the app skips all server calls.  
 **Why:** Cloudflare could not detect the app in the monorepo root. A deployed https page probing `http://localhost:3001` would also trigger browser local-network prompts for every visitor.
 
+
+## D31 — M6 with a free model (Leffa on Hugging Face) instead of Meta
+**Date:** 2026-10-29  
+**Decision:** Realistic Photo can use Leffa (MIT licence) running as a Hugging Face Space. The browser calls only this app's `POST /api/generate`; the server relays to the Space over Gradio's HTTP API, with a small dependency-free client (`gradioClient.ts`). Meta providers stay parked.  
+**Why:** The user asked for a free model. Gemini image models have no free tier. Open try-on models with usable licences are Leffa (MIT) and FASHN VTON v1.5 (Apache-2.0); IDM-VTON, CatVTON and OOTDiffusion are non-commercial. Only Leffa's Gradio inputs could be confirmed from source, so only Leffa is wired in.
+
+## D32 — Free hosted model is guarded: consent, limits, fallback
+**Date:** 2026-10-29  
+**Decision:** The person is asked before any upload (declining means the on-device render). The server validates image bytes (not declared types), caps size, rate limits per client, caps parallel jobs to protect the free quota, refuses result downloads from any host other than the Space, hides upstream detail, and redacts tokens in logs. `FallbackTryOnGenerator` falls back to the on-device render on any failure except a content-policy refusal, which is re-thrown.  
+**Why:** A photo of a person leaves the device, the free quota is tiny and shared, and the server must not become an open fetcher or leak a token.
+
+## D33 — Unverified API details are flagged, not hidden
+**Date:** 2026-10-29  
+**Decision:** The endpoint name and the file-upload step are marked unverified in code and docs, and `pnpm check:free-tryon` exists to confirm them. The hf.space hosts could not be reached from the build environment.  
+**Why:** Never invent API details. A one-command check turns an assumption into a fact on the first real run.

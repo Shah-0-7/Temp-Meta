@@ -29,6 +29,18 @@ export interface ServerConfig {
     maxSessionSeconds: number;
   };
 
+  // Free hosted try-on model (Leffa on a Hugging Face Space). On when PROVIDER_GENERATOR=leffa-space.
+  freeTryOn: {
+    enabled: boolean;
+    spaceUrl: string;
+    /** Gradio endpoint name; the Space sets none, so this is the function name by default. */
+    apiName: string;
+    /** Optional Hugging Face token: raises limits. Server-side only. */
+    hfToken: string;
+    timeoutMs: number;
+    maxConcurrent: number;
+  };
+
   /** Browser origins allowed to call the API (also restricts Decart tokens in production). */
   allowedOrigins: string[];
 
@@ -76,6 +88,15 @@ export function loadConfig(): ServerConfig {
       featureEnabled: process.env.FEATURE_REALTIME_TRYON === 'true',
       model: process.env.DECART_MODEL || 'lucy-vton-latest',
       maxSessionSeconds: parseInt(process.env.REALTIME_MAX_SESSION_SECONDS ?? '300', 10),
+    },
+
+    freeTryOn: {
+      enabled: (process.env.PROVIDER_GENERATOR ?? '') === 'leffa-space',
+      spaceUrl: process.env.FREE_TRYON_SPACE_URL || 'https://franciszzj-leffa.hf.space',
+      apiName: process.env.FREE_TRYON_API_NAME || 'leffa_predict_vt',
+      hfToken: process.env.HF_TOKEN ?? '',
+      timeoutMs: parseInt(process.env.FREE_TRYON_TIMEOUT_MS ?? '150000', 10),
+      maxConcurrent: parseInt(process.env.FREE_TRYON_MAX_CONCURRENT ?? '2', 10),
     },
 
     allowedOrigins: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173,http://localhost:3000')
