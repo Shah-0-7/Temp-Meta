@@ -15,15 +15,23 @@
  */
 
 import { createHmac } from 'crypto';
-import { safeFetch, SSRFError } from './ssrfGuard.js';
+import { safeFetch, SSRFError, ResponseTooLargeError } from './ssrfGuard.js';
+
+/** The upstream answered with something other than a supported image. */
+export class UnsupportedImageError extends Error {
+  constructor() {
+    super('The link did not return a supported image.');
+    this.name = 'UnsupportedImageError';
+  }
+}
 
 const ALLOWED_CONTENT_TYPES = new Set([
   'image/jpeg',
-  'image/jpg',
   'image/png',
   'image/webp',
   'image/avif',
   'image/gif',
+  // SVG is deliberately absent: it can carry script.
 ]);
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024; // 20MB
@@ -65,47 +73,40 @@ export function verifyProxySignature(imageUrl: string, sig: string, secret: stri
 
 /**
  * Fetch and return an image through the proxy.
- * Returns the response ready to stream.
+ * The body is capped while streaming, so no upstream can make this server buffer or relay more
+ * than MAX_IMAGE_BYTES.
  *
- * @throws SSRFError | Error
+ * @throws SSRFError | ResponseTooLargeError | UnsupportedImageError | Error
  */
-export async function proxyImage(imageUrl: string): Promise<{
-  body: ReadableStream<Uint8Array>;
-  contentType: string;
-  contentLength: string | null;
-}> {
+export async function proxyImage(
+  imageUrl: string,
+  signal?: AbortSignal,
+): Promise<{ body: ReadableStream<Uint8Array>; contentType: string }> {
   let response: Response;
   try {
     response = await safeFetch(imageUrl, {
       maxRedirects: 3,
-      timeoutMs: 15_000,
+      timeoutMs: 20_000,
       maxBytes: MAX_IMAGE_BYTES,
+      signal,
     });
   } catch (err) {
-    if (err instanceof SSRFError) throw err;
+    if (err instanceof SSRFError || err instanceof ResponseTooLargeError) throw err;
     throw new Error(`Failed to fetch image: ${(err as Error).message}`);
   }
 
   if (!response.ok) {
+    await response.body?.cancel();
     throw new Error(`Upstream returned HTTP ${response.status}`);
   }
 
-  const rawContentType = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
-  const contentType = ALLOWED_CONTENT_TYPES.has(rawContentType) ? rawContentType : 'image/jpeg';
-
-  // Validate size
-  const contentLength = response.headers.get('content-length');
-  if (contentLength && parseInt(contentLength, 10) > MAX_IMAGE_BYTES) {
-    throw new Error(`Image too large: ${contentLength} bytes`);
+  // No guessing: an unknown or missing type is refused rather than relabelled as a JPEG.
+  let contentType = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+  if (contentType === 'image/jpg') contentType = 'image/jpeg'; // a common non-standard spelling
+  if (!ALLOWED_CONTENT_TYPES.has(contentType) || !response.body) {
+    await response.body?.cancel();
+    throw new UnsupportedImageError();
   }
 
-  if (!response.body) {
-    throw new Error('No response body from upstream');
-  }
-
-  return {
-    body: response.body,
-    contentType,
-    contentLength,
-  };
+  return { body: response.body, contentType };
 }

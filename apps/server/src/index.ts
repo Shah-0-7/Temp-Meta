@@ -7,20 +7,21 @@
  */
 
 import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { createHmac } from 'crypto';
 import { loadConfig } from './config.js';
 import { resolveProductUrl } from './services/urlResolver.js';
-import { verifyProxySignature, proxyImage } from './services/imageProxy.js';
-import { SSRFError } from './services/ssrfGuard.js';
-import { handleToken, RateLimiter } from './services/realtimeToken.js';
+import { verifyProxySignature, proxyImage, buildProxyUrl, UnsupportedImageError } from './services/imageProxy.js';
+import { SSRFError, ResponseTooLargeError } from './services/ssrfGuard.js';
+import { handleToken } from './services/realtimeToken.js';
+import { RateLimiter, clientKey, configureClientIp, setClientAddress } from './services/rateLimit.js';
 import { handleGenerate, LeffaSpaceBackend, type TryOnBackend } from './services/freeTryOn.js';
 import { GradioClient } from './services/gradioClient.js';
 
 const config = loadConfig();
 const app = new Hono();
+configureClientIp({ trustProxyHops: config.trustProxyHops });
 
 /** The free hosted model, when configured. A bad Space URL disables it instead of crashing the server. */
 function createFreeBackend(): TryOnBackend | null {
@@ -46,6 +47,13 @@ const freeBackend = createFreeBackend();
 // ---------------------------------------------------------------------------
 
 app.use('*', logger());
+// Rate limits key on the socket address (and X-Forwarded-For only when TRUST_PROXY_HOPS says to).
+app.use('*', async (c: Context, next: () => Promise<void>) => {
+  // @hono/node-server passes the Node request as `env.incoming`.
+  const env = c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined;
+  setClientAddress(c.req.raw, env?.incoming?.socket?.remoteAddress);
+  await next();
+});
 app.use(
   '*',
   cors({
@@ -81,7 +89,24 @@ app.get('/api/health', (c) =>
 // POST /api/resolve
 // ---------------------------------------------------------------------------
 
+const resolveLimiter = new RateLimiter(config.rateLimit.resolveRPM);
+const proxyLimiter = new RateLimiter(config.rateLimit.proxyRPM);
+
+function limited(c: Context, key: string, limiter: RateLimiter): Response | null {
+  const rate = limiter.check(key);
+  if (rate.allowed) return null;
+  c.header('Retry-After', String(Math.ceil(rate.retryAfterMs / 1000)));
+  return c.json({ error: 'Too many requests. Wait a moment and try again.' }, 429);
+}
+
 app.post('/api/resolve', async (c) => {
+  const blocked = limited(c, clientKey(c.req.raw), resolveLimiter);
+  if (blocked) return blocked;
+
+  // Only a URL is expected, so anything bigger is not a legitimate request.
+  const declared = Number(c.req.header('content-length') ?? 0);
+  if (declared > 8 * 1024) return c.json({ error: 'Request too large' }, 413);
+
   let body: { url?: string };
   try {
     body = await c.req.json();
@@ -90,7 +115,7 @@ app.post('/api/resolve', async (c) => {
   }
 
   const { url } = body;
-  if (!url || typeof url !== 'string') {
+  if (!url || typeof url !== 'string' || url.length > 2048) {
     return c.json({ error: 'Missing or invalid "url" field' }, 400);
   }
 
@@ -124,6 +149,7 @@ app.post('/api/resolve', async (c) => {
     if (err instanceof SSRFError) {
       return c.json({ error: `Blocked: ${err.message}` }, 422);
     }
+    if (err instanceof ResponseTooLargeError) return c.json({ error: 'That page is too large to read.' }, 413);
     const message = (err as Error).message;
     console.error('[resolve] Error:', message);
     return c.json({ error: `Failed to resolve URL: ${message}` }, 502);
@@ -135,6 +161,9 @@ app.post('/api/resolve', async (c) => {
 // ---------------------------------------------------------------------------
 
 app.get('/api/proxy', async (c) => {
+  const blocked = limited(c, clientKey(c.req.raw), proxyLimiter);
+  if (blocked) return blocked;
+
   const imageUrl = c.req.query('url');
   const sig = c.req.query('sig');
 
@@ -147,20 +176,24 @@ app.get('/api/proxy', async (c) => {
   }
 
   try {
-    const { body, contentType, contentLength } = await proxyImage(imageUrl);
+    const { body, contentType } = await proxyImage(imageUrl, c.req.raw.signal);
 
-    const headers: Record<string, string> = {
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=86400, s-maxage=3600',
-      'X-Content-Type-Options': 'nosniff',
-    };
-    if (contentLength) headers['Content-Length'] = contentLength;
-
-    return new Response(body, { status: 200, headers });
+    return new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400, s-maxage=3600',
+        'X-Content-Type-Options': 'nosniff',
+        // The image is only ever drawn into the page; nothing in it should run.
+        'Content-Security-Policy': "default-src 'none'; sandbox",
+      },
+    });
   } catch (err) {
     if (err instanceof SSRFError) {
       return c.json({ error: `Blocked: ${err.message}` }, 422);
     }
+    if (err instanceof ResponseTooLargeError) return c.json({ error: 'The image is too large.' }, 413);
+    if (err instanceof UnsupportedImageError) return c.json({ error: err.message }, 415);
     const message = (err as Error).message;
     console.error('[proxy] Error:', imageUrl, message);
     return c.json({ error: message }, 502);
@@ -218,16 +251,3 @@ serve({
 });
 
 export default app;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function buildProxyUrl(imageUrl: string, secret: string, origin: string): string {
-  const sig = createHmac('sha256', secret)
-    .update(imageUrl)
-    .digest('base64url')
-    .slice(0, 16);
-  const params = new URLSearchParams({ url: imageUrl, sig });
-  return `${origin}/api/proxy?${params}`;
-}

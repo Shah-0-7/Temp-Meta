@@ -41,6 +41,9 @@ export interface ServerConfig {
     maxConcurrent: number;
   };
 
+  /** Reverse proxies in front of this server that append to X-Forwarded-For (0 = ignore the header). */
+  trustProxyHops: number;
+
   /** Browser origins allowed to call the API (also restricts Decart tokens in production). */
   allowedOrigins: string[];
 
@@ -62,6 +65,8 @@ export interface ServerConfig {
   // Rate limiting
   rateLimit: {
     resolveRPM: number;
+    /** Image proxy requests per minute per client (a product page can show many images). */
+    proxyRPM: number;
     generateRPM: number;
     /** Live-session token requests per minute per client. */
     tokenRPM: number;
@@ -99,6 +104,8 @@ export function loadConfig(): ServerConfig {
       maxConcurrent: parseInt(process.env.FREE_TRYON_MAX_CONCURRENT ?? '2', 10),
     },
 
+    trustProxyHops: parseInt(process.env.TRUST_PROXY_HOPS ?? '0', 10) || 0,
+
     allowedOrigins: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173,http://localhost:3000')
       .split(',')
       .map((s) => s.trim())
@@ -119,6 +126,7 @@ export function loadConfig(): ServerConfig {
 
     rateLimit: {
       resolveRPM: parseInt(process.env.RATE_LIMIT_RESOLVE_RPM ?? '30', 10),
+      proxyRPM: parseInt(process.env.RATE_LIMIT_PROXY_RPM ?? '240', 10),
       generateRPM: parseInt(process.env.RATE_LIMIT_GENERATE_RPM ?? '10', 10),
       tokenRPM: parseInt(process.env.RATE_LIMIT_TOKEN_RPM ?? '6', 10),
     },

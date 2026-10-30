@@ -133,11 +133,15 @@ export interface GarmentSegmenter extends Provider {
 // ImageUnderstanding
 // ---------------------------------------------------------------------------
 
+/** Where on the page an image candidate was found. Structured data is the most trustworthy. */
+export type ImageSource = 'json-ld' | 'og' | 'twitter' | 'link' | 'img' | 'direct';
+
 export interface ImageCandidate {
   url: string;
   alt?: string;
   width?: number;
   height?: number;
+  source?: ImageSource;
 }
 
 export interface GarmentCandidate {

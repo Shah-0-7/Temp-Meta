@@ -5,6 +5,8 @@
  * server process; put a shared store behind it if the server is ever scaled out.
  */
 
+import { isIP } from 'node:net';
+
 export interface RateLimitResult {
   allowed: boolean;
   limit: number;
@@ -44,8 +46,39 @@ export class RateLimiter {
   }
 }
 
-/** Best-effort client key. Behind a proxy, `x-forwarded-for` carries the real address. */
+// ---------------------------------------------------------------------------
+// Client identity
+// ---------------------------------------------------------------------------
+
+let trustProxyHops = 0;
+const peerAddresses = new WeakMap<Request, string>();
+
+/**
+ * How many reverse proxies sit in front of this server and append to `X-Forwarded-For`.
+ * 0 (the default) means the header is ignored entirely: anyone can send it, so trusting it
+ * would let a caller pick a fresh identity per request and walk past every limit.
+ */
+export function configureClientIp(options: { trustProxyHops: number }): void {
+  trustProxyHops = Math.max(0, Math.floor(options.trustProxyHops) || 0);
+}
+
+/** Records the socket's remote address for a request (called once per request by the server). */
+export function setClientAddress(req: Request, address: string | undefined): void {
+  if (address) peerAddresses.set(req, address);
+}
+
+/**
+ * The identity a request is rate limited under. With no trusted proxy it is the socket address.
+ * With N trusted proxies it is the entry N places from the right of `X-Forwarded-For`, the one
+ * the outermost proxy you control appended; anything to its left is client-supplied.
+ */
 export function clientKey(req: Request): string {
-  const fwd = req.headers.get('x-forwarded-for');
-  return (fwd ? fwd.split(',')[0].trim() : '') || 'local';
+  const peer = peerAddresses.get(req) ?? 'local';
+  if (trustProxyHops <= 0) return peer;
+  const parts = (req.headers.get('x-forwarded-for') ?? '')
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const candidate = parts[parts.length - trustProxyHops];
+  return candidate && isIP(candidate) ? candidate : peer;
 }

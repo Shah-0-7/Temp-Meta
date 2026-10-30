@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { HeuristicUnderstanding } from '../../src/providers/image-understanding/HeuristicUnderstanding';
+import { HeuristicUnderstanding, detectGarmentType } from '../../src/providers/image-understanding/HeuristicUnderstanding';
 import type { ImageUnderstanding, ImageCandidate } from '../../src/providers/types';
 
 // ---------------------------------------------------------------------------
@@ -81,6 +81,48 @@ describe('ImageUnderstanding contract: HeuristicUnderstanding', () => {
   it('handles empty candidate list', async () => {
     const ranked = await understanding.rankCandidates([]);
     expect(ranked).toEqual([]);
+  });
+});
+
+describe('HeuristicUnderstanding: product-page ranking', () => {
+  const u = new HeuristicUnderstanding();
+
+  it('does not mistake ordinary words for garments', () => {
+    expect(detectGarmentType('laptop capture stop guarantee').matched).toBe(false);
+    expect(detectGarmentType('Slim fit crop top').type).toBe('top');
+    expect(detectGarmentType('Padded Puffer Jackets').type).toBe('outerwear');
+    expect(detectGarmentType('Relaxed Fit T-Shirt').type).toBe('top');
+    expect(detectGarmentType('floral shirt dress').type).toBe('dress');
+  });
+
+  it('prefers structured product data over a stray <img> of the same size', async () => {
+    const ranked = await u.rankCandidates([
+      { url: 'https://x.com/a.jpg', width: 800, height: 1000, source: 'img' },
+      { url: 'https://x.com/b.jpg', width: 800, height: 1000, source: 'json-ld' },
+    ]);
+    expect(ranked[0].url).toBe('https://x.com/b.jpg');
+  });
+
+  it('reads the garment type from the file name when the alt text says nothing', async () => {
+    const ranked = await u.rankCandidates([{ url: 'https://x.com/img/mens-fleece-jacket_01.jpg', width: 800, height: 1000 }]);
+    expect(ranked[0].garmentType).toBe('outerwear');
+  });
+
+  it('pushes logos, icons and sprites down', async () => {
+    const ranked = await u.rankCandidates([
+      { url: 'https://x.com/assets/site-logo.png', width: 800, height: 800, source: 'img' },
+      { url: 'https://x.com/p/12345.jpg', width: 400, height: 500, source: 'img' },
+    ]);
+    expect(ranked[0].url).toBe('https://x.com/p/12345.jpg');
+  });
+
+  it('keeps page order for equal scores', async () => {
+    const ranked = await u.rankCandidates([
+      { url: 'https://x.com/1.jpg' },
+      { url: 'https://x.com/2.jpg' },
+      { url: 'https://x.com/3.jpg' },
+    ]);
+    expect(ranked.map((r) => r.url)).toEqual(['https://x.com/1.jpg', 'https://x.com/2.jpg', 'https://x.com/3.jpg']);
   });
 });
 

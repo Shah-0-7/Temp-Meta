@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { handleToken, type TokenRouteDeps } from '../../src/services/realtimeToken';
-import { RateLimiter, clientKey } from '../../src/services/rateLimit';
+import { RateLimiter, clientKey, configureClientIp, setClientAddress } from '../../src/services/rateLimit';
 
 const req = (headers: Record<string, string> = {}) =>
   new Request('http://localhost:3001/api/token', { method: 'POST', headers });
@@ -64,6 +64,7 @@ describe('POST /api/token', () => {
   });
 
   it('rate-limits per client with Retry-After', async () => {
+    configureClientIp({ trustProxyHops: 1 });
     const d = deps();
     for (let i = 0; i < 3; i++) expect((await handleToken(req({ 'x-forwarded-for': '1.1.1.1' }), d)).status).toBe(200);
     const blocked = await handleToken(req({ 'x-forwarded-for': '1.1.1.1' }), d);
@@ -71,6 +72,7 @@ describe('POST /api/token', () => {
     expect(Number(blocked.headers.get('retry-after'))).toBeGreaterThan(0);
     // A different client is unaffected.
     expect((await handleToken(req({ 'x-forwarded-for': '2.2.2.2' }), d)).status).toBe(200);
+    configureClientIp({ trustProxyHops: 0 });
   });
 
   it('hides vendor failure detail from the browser', async () => {
@@ -101,8 +103,22 @@ describe('RateLimiter', () => {
     expect(l.check('a').allowed).toBe(true);
   });
 
-  it('takes the first forwarded address as the client key', () => {
-    expect(clientKey(req({ 'x-forwarded-for': '9.9.9.9, 10.0.0.1' }))).toBe('9.9.9.9');
-    expect(clientKey(req())).toBe('local');
+  it('ignores X-Forwarded-For unless a proxy is trusted (it is client-controlled)', () => {
+    configureClientIp({ trustProxyHops: 0 });
+    const a = req({ 'x-forwarded-for': '9.9.9.9' });
+    expect(clientKey(a)).toBe('local');
+    setClientAddress(a, '203.0.113.7');
+    expect(clientKey(a)).toBe('203.0.113.7');
+  });
+
+  it('with one trusted proxy, uses the entry that proxy appended (the right-most), not the spoofable left side', () => {
+    configureClientIp({ trustProxyHops: 1 });
+    expect(clientKey(req({ 'x-forwarded-for': '6.6.6.6, 9.9.9.9' }))).toBe('9.9.9.9');
+    const r = req({ 'x-forwarded-for': 'not-an-ip' });
+    setClientAddress(r, '198.51.100.2');
+    expect(clientKey(r)).toBe('198.51.100.2');
+    configureClientIp({ trustProxyHops: 2 });
+    expect(clientKey(req({ 'x-forwarded-for': '6.6.6.6, 8.8.8.8, 9.9.9.9' }))).toBe('8.8.8.8');
+    configureClientIp({ trustProxyHops: 0 });
   });
 });

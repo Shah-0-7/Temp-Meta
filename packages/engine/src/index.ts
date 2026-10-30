@@ -13,6 +13,7 @@ export type {
   SegmentationResult,
   GarmentSegmenter,
   ImageCandidate,
+  ImageSource,
   GarmentCandidate,
   GarmentDescription,
   ImageUnderstanding,
@@ -43,7 +44,7 @@ export type { ProviderConfig } from './providers/registry.js';
 
 // Default provider implementations
 export { BrowserSAMSegmenter } from './providers/garment-segmenter/BrowserSAMSegmenter.js';
-export { HeuristicUnderstanding } from './providers/image-understanding/HeuristicUnderstanding.js';
+export { HeuristicUnderstanding, detectGarmentType } from './providers/image-understanding/HeuristicUnderstanding.js';
 export { CutoutOnlyNormalizer } from './providers/garment-normalizer/CutoutOnlyNormalizer.js';
 export { MockTryOnGenerator } from './providers/tryon-generator/MockTryOnGenerator.js';
 export { NullRealtimeTryOn } from './providers/realtime-tryon/NullRealtimeTryOn.js';
