@@ -135,6 +135,11 @@ export function useRealisticRender() {
       useAppStore.getState().showNotice('Pick a garment first (press G), then take a photo.');
       return;
     }
+    if (!engineHandle.latest?.pose) {
+      // Without a tracked body the mirror shows no garment, so a photo would be just the camera.
+      useAppStore.getState().showNotice('I cannot see your shoulders yet, so the garment is not on you. Step into view, then try again.');
+      return;
+    }
     try {
       const [after, before] = await Promise.all([captureLiveFrame(), captureCameraFrame()]);
       const thumb = picked.proxyUrl ?? picked.url;

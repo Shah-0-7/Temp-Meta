@@ -81,5 +81,8 @@ Updated as development progresses.
 - **Onboarding remembers itself in `localStorage`;** if the browser blocks storage it shows again each visit.
 - **Desktop Chrome only.** Other browsers and mobile are not tested.
 - **Webcam quality matters.** Low-light or low-resolution cameras produce worse tracking and overlay quality.
-- **URL resolution.** Some e-commerce sites block automated fetching. The app falls back to manual upload.
+- **URL resolution.** Some e-commerce sites block automated fetching. The app falls back to manual upload. Pages are read for structured product data, meta tags and `<img>`/`<picture>` elements only; images that a script adds after the page loads are not seen. Picking the best photo is a heuristic (size, shape, where it was found, words in the alt text and file name), so check the choice. The garment kind is a guess from text; fix it with Top / Jacket.
+- **Rate limits are per server process and in memory.** They reset on restart and are not shared if you run several servers. Behind a reverse proxy set `TRUST_PROXY_HOPS`, or every visitor is counted as the proxy.
+- **Only ports 80, 443, 8080 and 8443** are fetched when resolving a link or proxying an image.
+- **Quick photo (C)** saves the live preview, so it is as good as the live preview is: no fabric physics, and no garment appears until the body is tracked.
 - **No size recommendation.** The app does not predict or recommend garment sizes.

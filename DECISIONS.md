@@ -186,3 +186,28 @@ Each entry records what was decided, why, and any alternatives considered.
 **Date:** 2026-10-30  
 **Decision:** The render dialog now shows the render `note` (for example, why the on-device render was used instead of the AI model). The "Nothing was uploaded" line shows only when there is no note and the render was local.  
 **Why:** After a failed AI upload the old line would have been untrue, and the fallback explanation was stored but never displayed.
+
+## D36 — The server's outbound fetching is validated at connect time
+**Date:** 2026-10-30  
+**Decision:** `ssrfGuard.ts` fetches with Node's `http`/`https` instead of global `fetch` so it can validate the address inside the socket's own DNS lookup (the address checked is the address connected to). Addresses are classified numerically, including IPv4-mapped IPv6, NAT64, 6to4, unique-local and reserved IPv4 ranges. Only ports 80, 443, 8080 and 8443 are allowed, redirects are followed by hand and re-checked, bodies are capped while streaming (decoded size for gzip/deflate/brotli), and the deadline covers the whole download.  
+**Why:** The earlier "resolve, check, then `fetch`" design can be beaten by DNS rebinding, its address check was string prefixes that missed mapped IPv6, and it trusted `Content-Length`. The resolve and proxy routes fetch arbitrary URLs for strangers, so this is the one place a mistake becomes a real incident.
+
+## D37 — Client identity for rate limits is the socket, not a header
+**Date:** 2026-10-30  
+**Decision:** Limits key on the connection's remote address. `X-Forwarded-For` is read only when `TRUST_PROXY_HOPS` says how many proxies sit in front, and then the entry that proxy appended is used (counting from the right). `/api/resolve` and `/api/proxy` are now limited too.  
+**Why:** Any caller can send `X-Forwarded-For`; trusting it let a client choose a new identity per request and ignore every limit. The cost: behind a proxy with the setting left at 0, all visitors share one bucket, which is documented in `.env.example`.
+
+## D38 — Ranking happens in the browser, through the provider interface
+**Date:** 2026-10-30  
+**Decision:** The server finds and tidies image candidates (`productPage.ts`) and tags where each came from. The browser ranks them with the registered `ImageUnderstanding` provider (heuristic by default) and selects the first. The page title, when it names a garment, decides the garment kind for the page.  
+**Why:** `rankCandidates` existed but nothing called it, so the first image on the page was always chosen. Ranking through the registry means a smarter provider can replace the heuristic later with no UI change, and the server stays free of engine runtime code.
+
+## D39 — Quick photo is a separate, local action
+**Date:** 2026-10-30  
+**Decision:** `C` saves the live preview (camera plus garment) to the gallery with no AI step. It is captured inside the frame callback right after the draw, because the canvas does not keep its pixels. It needs a tracked body; otherwise the app says so instead of saving a photo with no garment on it.  
+**Why:** The Realistic render is slow and may use an online model. Many people only want a picture of the preview, and it is the one path that is guaranteed local.
+
+## D40 — Blob URLs are owned by one place
+**Date:** 2026-10-30  
+**Decision:** The garment store revokes any `blob:` URL once the candidate list, the selection and the recents no longer reference it. Other stores never borrow a garment's blob URL (the gallery drops it).  
+**Why:** Uploaded and pasted images were never released, and a borrowed URL would break the moment it was released.

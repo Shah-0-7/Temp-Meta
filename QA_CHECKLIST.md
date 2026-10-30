@@ -83,3 +83,23 @@ Run in desktop Chrome with a real webcam. Tick each box; note the browser, machi
 - [ ] Garment, settings, gallery, help and consent are opaque paper, readable over the camera.
 - [ ] Phone width (about 390 px): header fits without overlap, nothing scrolls sideways.
 - [ ] Keyboard: Tab shows a visible ring on every control, and the closed garment panel is skipped.
+
+## Garment choice, paste and quick photo
+
+- [ ] Paste a real product link: the first image shown is the garment (tagged "Best match"), and the kind under "This is a" is right for a shirt and for a jacket
+- [ ] On a page that names no garment in its title, the kind defaults to Top and can be switched to Jacket; the mesh changes without the picture reloading
+- [ ] A link to a skirt or trousers shows the "only tops and jackets" warning
+- [ ] Copy an image on a shop page, press Ctrl/Cmd+V with the app focused: the garment panel opens with it selected. Pasting a link does the same
+- [ ] An upload over 15 MB, or a file that is not an image, shows a readable message
+- [ ] Try three garments, then reopen the panel: "Tried earlier" shows them and one tap switches back
+- [ ] Press C with a garment on and your shoulders in view: "Saved to your gallery" appears and the picture has the garment on you. With no garment, or out of view, it says why and saves nothing
+- [ ] Start a Realistic render, then press Esc before it finishes: the panel stays closed and nothing is added to the gallery
+- [ ] Start a render, then start another: only the second result appears
+- [ ] Paste a link for a slow or dead site: it stops with a message within about 25 seconds, and a second lookup started meanwhile wins
+
+## Server (run once on a real deployment)
+
+- [ ] `/api/resolve` with `http://127.0.0.1/`, `http://169.254.169.254/`, `http://[::ffff:7f00:1]/` and a hostname that resolves to a private address all answer 422
+- [ ] `/api/proxy` on a link that returns HTML answers 415; on a very large image, 413
+- [ ] More than 30 resolves a minute from one client answers 429 with Retry-After
+- [ ] Behind your proxy, requests from two different clients are limited separately (`TRUST_PROXY_HOPS` set correctly)

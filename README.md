@@ -18,10 +18,11 @@ Requires Node 20+ and pnpm 9+. Use desktop Chrome with a webcam.
 
 1. Allow the camera. Stand back so your head, shoulders and hips are visible and face the camera. Hints tell you what to change.
 2. Press **G**. Click a sample garment, paste a product page link, or upload a photo.
-3. The garment follows you live. Press **Space** for a full-resolution **Realistic render**: compare before and after, download it, retake it.
+3. The garment follows you live. Press **Space** for a full-resolution **Realistic render**: compare before and after, download it, retake it. Press **C** for a quick photo of the live preview instead (no AI, nothing uploaded).
+4. With a product link, the app picks the best photo on the page for you and guesses top or jacket; change it under "This is a". You can also paste an image or link anywhere, and garments you tried earlier are one tap away.
 4. Every render is kept in a session gallery (**V**) where you can compare two outfits side by side. Snapshots live in memory only and vanish on reload.
 
-Shortcuts: `Space` render, `G` garment, `V` gallery, `L` live AI (if enabled), `M` mirror, `P` perf HUD, `D` debug overlay, `?` help, `Esc` close the top panel. The first visit shows a short walkthrough; reopen it with `?`.
+Shortcuts: `Space` render, `C` quick photo (live preview, no AI), `G` garment, `V` gallery, `L` live AI (if enabled), `M` mirror, `P` perf HUD, `D` debug overlay, `?` help, `Esc` close the top panel. The first visit shows a short walkthrough; reopen it with `?`.
 
 Slow machine? Settings has camera resolution, FPS cap, the Accurate/Fast pose model, and Auto-adapt, which lowers tracking work under load and tells you when it does. Quality is the default; speed is an option.
 
