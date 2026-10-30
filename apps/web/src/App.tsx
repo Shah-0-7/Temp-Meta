@@ -25,7 +25,7 @@ export function App() {
   const { togglePerfHUD, toggleDebugOverlay, toggleSettings, settingsOpen } = useSettingsStore();
   const { toggleGarmentPanel, garmentPanelOpen } = useGarmentStore();
   const { toggleMirror } = useCamera();
-  const { render } = useRealisticRender();
+  const { render, quickPhoto } = useRealisticRender();
   useRealtimeLifecycle();
 
   // Keyboard shortcuts (the list lives in lib/shortcuts.ts, shared with the help dialog)
@@ -86,6 +86,9 @@ export function App() {
         case 'm':
           toggleMirror();
           break;
+        case 'c':
+          if (useCameraStore.getState().cameraState === 'active') void quickPhoto();
+          break;
         case '?':
           app.setHelpOpen(!app.helpOpen);
           break;
@@ -102,7 +105,7 @@ export function App() {
 
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
-  }, [togglePerfHUD, toggleDebugOverlay, toggleSettings, toggleGarmentPanel, toggleMirror, render, settingsOpen, garmentPanelOpen]);
+  }, [togglePerfHUD, toggleDebugOverlay, toggleSettings, toggleGarmentPanel, toggleMirror, render, quickPhoto, settingsOpen, garmentPanelOpen]);
 
   return (
     <div className="flex flex-col h-full">

@@ -27,7 +27,7 @@ export function CameraView() {
   const { cameraState, startCamera, stopCamera, toggleMirror, mirror, actualWidth, actualHeight } = useCamera();
   const { perf, onTrackingResult } = useEngine(canvasRef);
   const { initTracking, trackingReady, debugOverlay, initProgress } = useTracking(perf, onTrackingResult);
-  const { render, renderPhoto } = useRealisticRender();
+  const { render, renderPhoto, quickPhoto } = useRealisticRender();
   const showPerfHUD = useSettingsStore((s) => s.showPerfHUD);
   const showDebugOverlay = useSettingsStore((s) => s.showDebugOverlay);
   const fpsCap = useSettingsStore((s) => s.fpsCap);
@@ -111,6 +111,7 @@ export function CameraView() {
           onStop={stopCamera}
           onToggleMirror={toggleMirror}
           onSnapshot={() => void render()}
+          onQuickPhoto={() => void quickPhoto()}
           mirror={mirror}
           liveAvailable={liveAvailable}
           liveActive={liveActive}

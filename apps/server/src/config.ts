@@ -112,10 +112,10 @@ export function loadConfig(): ServerConfig {
       .filter(Boolean),
 
     providers: {
-      segmenter: process.env.PROVIDER_SEGMENTER ?? 'browser-sam',
+      segmenter: process.env.PROVIDER_SEGMENTER ?? 'flood-fill',
       understanding: process.env.PROVIDER_UNDERSTANDING ?? 'heuristic',
       normalizer: process.env.PROVIDER_NORMALIZER ?? 'cutout-only',
-      generator: process.env.PROVIDER_GENERATOR ?? 'mock',
+      generator: process.env.PROVIDER_GENERATOR ?? 'local',
       realtime: process.env.PROVIDER_REALTIME ?? 'null',
     },
 

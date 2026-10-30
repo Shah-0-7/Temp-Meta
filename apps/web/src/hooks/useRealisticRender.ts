@@ -10,11 +10,13 @@ import { useCallback } from 'react';
 import type { TryOnGenerator, TryOnRequest } from '@tryanywhere/engine';
 import { getAppRegistry } from '../lib/appRegistry';
 import { getCameraManager } from './useCamera';
-import { engineHandle } from './useEngine';
+import { engineHandle, captureLiveFrame } from './useEngine';
+import { useAppStore } from '../stores/appStore';
 import { useCameraStore } from '../stores/cameraStore';
 import { useGarmentStore } from '../stores/garmentStore';
 import { useRenderStore } from '../stores/renderStore';
 import { useSnapshotStore } from '../stores/snapshotStore';
+import { startRender, isCurrentRender } from '../lib/renderRun';
 
 function canvasToBlob(canvas: HTMLCanvasElement | OffscreenCanvas): Promise<Blob> {
   if ('convertToBlob' in canvas) return canvas.convertToBlob({ type: 'image/png' });
@@ -51,6 +53,7 @@ export function useRealisticRender() {
   /** Core flow. `live` = the person frame comes from the running camera (live landmarks are available). */
   const run = useCallback(async (getPerson: () => Promise<Blob>, mirror: boolean, live: boolean) => {
     const garment = engineHandle.garment;
+    const ticket = startRender();
     useRenderStore.getState().begin(mirror);
     try {
       if (!useGarmentStore.getState().selectedGarment || !garment) {
@@ -58,9 +61,11 @@ export function useRealisticRender() {
       }
 
       const person = await getPerson();
+      if (!isCurrentRender(ticket)) return;
       useRenderStore.getState().setCaptured(URL.createObjectURL(person), person);
 
       const generator = (await (await getAppRegistry()).resolve<TryOnGenerator>('tryon-generator')) as TryOnGenerator;
+      if (!isCurrentRender(ticket)) return;
       const latest = live ? engineHandle.latest : null;
       const request: TryOnRequest = {
         personFrame: person,
@@ -77,6 +82,8 @@ export function useRealisticRender() {
 
       const started = performance.now();
       const result = await generator.generate(request);
+      // A newer render started, or the panel was closed, while this one ran: drop this result.
+      if (!isCurrentRender(ticket)) return;
       const provider = String(result.metadata?.provider ?? generator.name);
       const note = typeof result.metadata?.note === 'string' ? result.metadata.note : null;
       useRenderStore.getState().setDone({
@@ -88,6 +95,7 @@ export function useRealisticRender() {
 
       // Keep it for this session so outfits can be compared. Memory only.
       const picked = useGarmentStore.getState().selectedGarment;
+      const thumb = picked?.proxyUrl ?? picked?.url ?? null;
       useSnapshotStore.getState().add({
         beforeBlob: person,
         afterBlob: result.image,
@@ -95,9 +103,11 @@ export function useRealisticRender() {
         provider,
         note,
         garmentLabel: picked?.alt?.trim() || 'Garment',
-        garmentThumb: picked?.proxyUrl ?? picked?.url ?? null,
+        // A blob: URL belongs to the garment store and may be revoked, so it is never borrowed here.
+        garmentThumb: thumb && !thumb.startsWith('blob:') ? thumb : null,
       });
     } catch (err) {
+      if (!isCurrentRender(ticket)) return;
       console.error('[useRealisticRender]', err);
       useRenderStore.getState().setError(friendlyError(err));
     }
@@ -115,5 +125,33 @@ export function useRealisticRender() {
     [run],
   );
 
-  return { render, renderPhoto };
+  /**
+   * Quick photo: save what the mirror shows right now (live preview with the garment) to the
+   * gallery. No AI, no upload, nothing leaves the device.
+   */
+  const quickPhoto = useCallback(async () => {
+    const picked = useGarmentStore.getState().selectedGarment;
+    if (!picked || !engineHandle.garment) {
+      useAppStore.getState().showNotice('Pick a garment first (press G), then take a photo.');
+      return;
+    }
+    try {
+      const [after, before] = await Promise.all([captureLiveFrame(), captureCameraFrame()]);
+      const thumb = picked.proxyUrl ?? picked.url;
+      useSnapshotStore.getState().add({
+        beforeBlob: before,
+        afterBlob: after,
+        mirrorBefore: useCameraStore.getState().mirror,
+        provider: 'Live preview',
+        note: null,
+        garmentLabel: picked.alt?.trim() || 'Garment',
+        garmentThumb: thumb && !thumb.startsWith('blob:') ? thumb : null,
+      });
+      useAppStore.getState().showNotice('Saved to your gallery. Press V to see it or download it.');
+    } catch (err) {
+      useAppStore.getState().showNotice((err as Error).message || 'Could not take the photo.');
+    }
+  }, []);
+
+  return { render, renderPhoto, quickPhoto };
 }

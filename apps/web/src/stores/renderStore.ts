@@ -5,6 +5,7 @@
  */
 
 import { create } from 'zustand';
+import { cancelRenders } from '../lib/renderRun';
 
 export type RenderStatus = 'idle' | 'capturing' | 'rendering' | 'done' | 'error';
 
@@ -92,6 +93,8 @@ export const useRenderStore = create<RenderState>((set, get) => ({
     set({ afterBlob, afterUrl: URL.createObjectURL(afterBlob), provider, note, elapsedMs, status: 'done' }),
   setError: (error) => set({ error, status: 'error' }),
   close: () => {
+    // Closing the panel abandons a render still in flight, so it cannot reopen the panel later.
+    cancelRenders();
     const { beforeUrl, afterUrl } = get();
     revoke(beforeUrl);
     revoke(afterUrl);

@@ -2,7 +2,7 @@
  * @module components/garment/CandidateGrid
  *
  * Responsive grid of image candidates returned by the resolver.
- * Shows each candidate with a preview, score badge, and garment type tag.
+ * Shows each candidate with a preview, a "Best match" tag on the first, and a garment type tag.
  * Selected candidate gets a highlighted ring.
  */
 
@@ -62,11 +62,9 @@ export function CandidateGrid() {
                 </div>
               )}
 
-              {/* Score badge */}
-              {typeof candidate.score === 'number' && (
-                <div className="absolute bottom-1 left-1 px-1 py-0.5 rounded text-[10px] tabular-nums bg-black/65 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                  {(candidate.score * 100).toFixed(0)}%
-                </div>
+              {/* The ranker's first choice */}
+              {index === 0 && candidates.length > 1 && (
+                <div className="absolute top-1.5 left-1.5 badge-best">Best match</div>
               )}
 
               {/* Garment type tag */}

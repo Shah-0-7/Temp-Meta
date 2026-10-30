@@ -15,6 +15,7 @@ export interface Shortcut {
 
 export const SHORTCUTS: readonly Shortcut[] = [
   { key: ' ', label: 'Space', description: 'Realistic render of this moment' },
+  { key: 'c', label: 'C', description: 'Quick photo of the live preview (no AI)' },
   { key: 'g', label: 'G', description: 'Choose a garment' },
   { key: 'l', label: 'L', description: 'Live AI try-on (only when enabled on the server)' },
   { key: 'v', label: 'V', description: 'Open the snapshot gallery' },

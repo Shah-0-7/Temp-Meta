@@ -11,6 +11,8 @@ interface CameraControlsProps {
   onStop: () => void;
   onToggleMirror: () => void;
   onSnapshot: () => void;
+  /** Save the live preview as it is, with no AI step. */
+  onQuickPhoto: () => void;
   mirror: boolean;
   /** Live AI try-on is enabled on the server. The button is hidden otherwise. */
   liveAvailable?: boolean;
@@ -22,6 +24,7 @@ export function CameraControls({
   onStop,
   onToggleMirror,
   onSnapshot,
+  onQuickPhoto,
   mirror,
   liveAvailable = false,
   liveActive = false,
@@ -41,6 +44,15 @@ export function CameraControls({
         aria-label="Mirror the preview"
       >
         <Icon name="flip" size={20} />
+      </button>
+
+      <button
+        onClick={onQuickPhoto}
+        className="dock-btn"
+        title="Quick photo of the preview, saved to the gallery (C)"
+        aria-label="Quick photo of the live preview"
+      >
+        <Icon name="image" size={20} />
       </button>
 
       <span className="dock-sep" aria-hidden="true" />

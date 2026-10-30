@@ -6,6 +6,9 @@
  */
 
 import { URLInput } from './URLInput';
+import { GarmentKind } from './GarmentKind';
+import { RecentGarments } from './RecentGarments';
+import { useGarmentPaste } from '../../hooks/useGarmentPaste';
 import { CandidateGrid } from './CandidateGrid';
 import { SampleGarments } from './SampleGarments';
 import { useGarmentStore } from '../../stores/garmentStore';
@@ -14,6 +17,7 @@ import { Icon } from '../ui/Icon';
 export function GarmentPanel() {
   const { garmentPanelOpen, selectedGarment, clearGarment, setGarmentPanelOpen, candidates } =
     useGarmentStore();
+  useGarmentPaste();
 
   return (
     <>
@@ -57,6 +61,9 @@ export function GarmentPanel() {
           {/* First-run friendly samples (no link or server needed) */}
           <SampleGarments />
 
+          {/* Garments used earlier this session */}
+          <RecentGarments />
+
           {/* Candidate grid */}
           {candidates.length > 0 && <CandidateGrid />}
 
@@ -76,7 +83,8 @@ export function GarmentPanel() {
 
         {/* Selected garment footer */}
         {selectedGarment && (
-          <div className="shrink-0 border-t border-[var(--color-glass-border)] p-4 flex items-center gap-3 bg-[var(--color-surface-2)]">
+          <div className="shrink-0 border-t border-[var(--color-glass-border)] p-4 flex flex-col gap-3 bg-[var(--color-surface-2)]">
+            <div className="flex items-center gap-3">
             <img
               src={selectedGarment.proxyUrl ?? selectedGarment.url}
               alt={selectedGarment.alt ?? 'Selected garment'}
@@ -86,9 +94,6 @@ export function GarmentPanel() {
               <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
                 {selectedGarment.alt ?? selectedGarment.garmentType ?? 'Garment selected'}
               </p>
-              {selectedGarment.garmentType && (
-                <p className="text-xs text-brand-400 font-medium capitalize">{selectedGarment.garmentType}</p>
-              )}
             </div>
             <button
               onClick={clearGarment}
@@ -98,6 +103,8 @@ export function GarmentPanel() {
             >
               <Icon name="close" size={18} />
             </button>
+            </div>
+            <GarmentKind />
           </div>
         )}
       </div>

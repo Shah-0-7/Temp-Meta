@@ -44,12 +44,57 @@ export const engineHandle: EngineHandle = {
   latest: null,
 };
 
+// ---- Capturing the live preview ---------------------------------------------------------
+// The canvas does not keep its pixels after a frame is presented, so a capture has to be taken
+// inside the frame callback, right after the draw. Requests wait here for the next frame.
+
+interface CaptureWaiter {
+  resolve: (blob: Blob) => void;
+  reject: (err: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+const captureWaiters: CaptureWaiter[] = [];
+
+/** The live preview exactly as drawn (camera picture plus garment), as a PNG. */
+export function captureLiveFrame(): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    if (!engineHandle.ctx || useCameraStore.getState().cameraState !== 'active') {
+      reject(new Error('The camera is not running.'));
+      return;
+    }
+    const waiter: CaptureWaiter = {
+      resolve,
+      reject,
+      timer: setTimeout(() => {
+        const at = captureWaiters.indexOf(waiter);
+        if (at >= 0) captureWaiters.splice(at, 1);
+        reject(new Error('The preview did not update. Try again.'));
+      }, 2000),
+    };
+    captureWaiters.push(waiter);
+  });
+}
+
+function flushCaptures(canvas: HTMLCanvasElement): void {
+  if (captureWaiters.length === 0) return;
+  const waiters = captureWaiters.splice(0);
+  // toBlob snapshots the bitmap when called, so doing it here (same task as the draw) is safe.
+  canvas.toBlob((blob) => {
+    for (const w of waiters) {
+      clearTimeout(w.timer);
+      if (blob) w.resolve(blob);
+      else w.reject(new Error('Could not save the picture.'));
+    }
+  }, 'image/png');
+}
+
 export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   const perfRef = useRef<PerfMonitor>(new PerfMonitor());
 
   const cameraState = useCameraStore((s) => s.cameraState);
   const mirror = useCameraStore((s) => s.mirror);
-  const selectedGarment = useGarmentStore((s) => s.selectedGarment);
+  const garmentUrl = useGarmentStore((s) => (s.selectedGarment ? (s.selectedGarment.proxyUrl ?? s.selectedGarment.url) : null));
+  const garmentKind = useGarmentStore((s) => s.selectedGarment?.garmentType ?? null);
   const shading = useSettingsStore((s) => s.garmentShading);
   const setEngineReady = useAppStore((s) => s.setEngineReady);
   const setError = useAppStore((s) => s.setError);
@@ -107,6 +152,7 @@ export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
       // Exact video size, no CSS side effects: the canvas keeps the camera's aspect ratio.
       ctx.setDrawingBufferSize(video.videoWidth, video.videoHeight);
       renderer.draw(video);
+      flushCaptures(ctx.canvas);
       endFrame();
     });
   }, [cameraState]);
@@ -128,18 +174,15 @@ export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
     const { setPrep } = useGarmentStore.getState();
     if (!renderer) return;
 
-    if (!selectedGarment) {
+    if (!garmentUrl) {
       renderer.clearGarment();
       engineHandle.garment = null;
       setPrep(null);
       return;
     }
 
-    const type = (selectedGarment as { garmentType?: string }).garmentType;
-    engineHandle.garmentType = type === 'outerwear' ? 'outerwear' : 'top';
-
     let cancelled = false;
-    const url = selectedGarment.proxyUrl ?? selectedGarment.url;
+    const url = garmentUrl;
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -172,7 +215,13 @@ export function useEngine(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
     return () => {
       cancelled = true;
     };
-  }, [selectedGarment, canvasRef]);
+    // Keyed on the image, not the garment object: changing only its kind must not reload the picture.
+  }, [garmentUrl, canvasRef]);
+
+  // The kind (top / jacket) only changes how the mesh is built, so it needs no reload.
+  useEffect(() => {
+    engineHandle.garmentType = garmentKind === 'outerwear' ? 'outerwear' : 'top';
+  }, [garmentKind]);
 
   // ---- Tracking results -> control points (stable callback) ------------------------------
 
