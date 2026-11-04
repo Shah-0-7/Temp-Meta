@@ -50,6 +50,15 @@ Updated as development progresses.
 - **Occasional artifacts.** AI generation may alter small details (logos, text on garments) or produce minor inconsistencies.
 - **One garment at a time.** Multi-garment try-on (e.g., top + bottom) is not supported yet.
 
+## Meta Muse Image render
+
+- **Never run with a real key.** It was written from Meta's published API docs and tested against a fake server. Run `pnpm check:meta person.jpg garment.png` and look at the result before relying on it.
+- **Unknown from the docs:** the largest accepted input image, typical render time, and how faithfully it keeps a person's face, body and background on a try-on prompt. Muse Image is an image-editing model, not a dedicated try-on model, so garment details (prints, logos) can drift.
+- **Costs money:** Meta lists $0.01 per generated image, limited to 150 requests a minute per team. This app also limits each client to `RATE_LIMIT_GENERATE_RPM` renders a minute.
+- **Your photo goes to Meta's service** (through this app's server). Consent is asked every session, naming Meta; what Meta keeps is governed by Meta's terms.
+- **Tops and jackets only**, same as the rest of the app.
+- **No refinement yet.** Muse Image supports follow-up edits through its Responses API; this app renders once per request.
+
 ## Free AI render (Leffa on a Hugging Face Space)
 
 - **Never run against the live Space.** It was written from the Space's source code and Hugging Face's API docs. Two details are unconfirmed: the endpoint name (`leffa_predict_vt`, Gradio's default because the Space sets none) and the upload step. `pnpm check:free-tryon` confirms both. If the Space has changed or sleeps, the app falls back to the on-device render.

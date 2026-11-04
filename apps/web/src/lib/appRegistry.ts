@@ -20,6 +20,9 @@ import {
 import { createDecartSdk } from './decartAdapter';
 import { API_BASE } from './api';
 import { useConsentStore } from '../stores/consentStore';
+import { describeRemote, type RemoteKind } from './remoteConsent';
+
+export type { RemoteKind };
 
 export interface ServerFeatures {
   /** Live AI try-on (Decart) is enabled AND configured on the server. */
@@ -29,7 +32,10 @@ export interface ServerFeatures {
   /** A free hosted model is configured for Realistic Photo (needs the person's consent to use). */
   remoteTryOn: boolean;
   remoteTryOnLabel: string;
+  /** Who receives the photo, in the order they are tried: Meta's Model API and/or a free community model. */
+  remoteTryOnKinds: RemoteKind[];
 }
+
 
 const NONE: ServerFeatures = {
   realtimeTryOn: false,
@@ -37,6 +43,7 @@ const NONE: ServerFeatures = {
   realtimeMaxSessionSeconds: 300,
   remoteTryOn: false,
   remoteTryOnLabel: '',
+  remoteTryOnKinds: [],
 };
 
 let featuresPromise: Promise<ServerFeatures> | null = null;
@@ -56,6 +63,9 @@ export function getServerFeatures(): Promise<ServerFeatures> {
           typeof f.realtimeMaxSessionSeconds === 'number' ? f.realtimeMaxSessionSeconds : NONE.realtimeMaxSessionSeconds,
         remoteTryOn: f.remoteTryOn === true,
         remoteTryOnLabel: typeof f.remoteTryOnLabel === 'string' ? f.remoteTryOnLabel : '',
+        remoteTryOnKinds: Array.isArray(f.remoteTryOnKinds)
+          ? f.remoteTryOnKinds.filter((k: unknown): k is RemoteKind => k === 'meta' || k === 'free-community')
+          : [],
       };
     } catch {
       return NONE;
@@ -90,25 +100,15 @@ export function getAppRegistry(): Promise<ProviderRegistry> {
       registry.registerFactory(
         'remote-tryon',
         () =>
-          // The free online model first; the on-device renderer if it is declined, busy or down.
+          // The online model first; the on-device renderer if it is declined, busy or down.
           new FallbackTryOnGenerator(
             new RemoteTryOnGenerator({
               endpoint: `${API_BASE}/api/generate`,
-              label: features.remoteTryOnLabel || 'Free AI model',
+              label: features.remoteTryOnLabel || 'AI model',
               requestConsent: () =>
                 useConsentStore.getState().ask({
                   key: 'remote-tryon',
-                  provider: features.remoteTryOnLabel || 'a free online AI model',
-                  title: 'Make the render with a free online AI model?',
-                  sends: [
-                    'The snapshot or photo of you (it shows you), sent through this app\u2019s server.',
-                    'The garment image.',
-                  ],
-                  notes: [
-                    'It is processed by a free, community-hosted service that this app does not control, so what that service keeps is up to its operator.',
-                    'Free usage is small and shared. If it is busy or used up, you automatically get the on-device render instead.',
-                    'Choose Cancel to get the on-device render. Nothing is uploaded then.',
-                  ],
+                  ...describeRemote(features.remoteTryOnLabel, features.remoteTryOnKinds),
                 }),
             }),
             new LocalTryOnGenerator(local),

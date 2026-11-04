@@ -17,30 +17,69 @@ import { SSRFError, ResponseTooLargeError } from './services/ssrfGuard.js';
 import { handleToken } from './services/realtimeToken.js';
 import { RateLimiter, clientKey, configureClientIp, setClientAddress } from './services/rateLimit.js';
 import { handleGenerate, LeffaSpaceBackend, type TryOnBackend } from './services/freeTryOn.js';
+import { MuseImageBackend } from './services/museImage.js';
+import { BackendChain } from './services/backendChain.js';
 import { GradioClient } from './services/gradioClient.js';
 
 const config = loadConfig();
 const app = new Hono();
 configureClientIp({ trustProxyHops: config.trustProxyHops });
 
-/** The free hosted model, when configured. A bad Space URL disables it instead of crashing the server. */
-function createFreeBackend(): TryOnBackend | null {
-  if (!config.freeTryOn.enabled) return null;
-  try {
-    return new LeffaSpaceBackend({
-      client: new GradioClient({
-        baseUrl: config.freeTryOn.spaceUrl,
-        token: config.freeTryOn.hfToken,
-        timeoutMs: config.freeTryOn.timeoutMs,
-      }),
-      apiName: config.freeTryOn.apiName,
-    });
-  } catch (err) {
-    console.error('[generate] free try-on disabled:', (err as Error).message);
-    return null;
+/** What the browser is told about each backend, so the consent dialog can describe where the photo goes. */
+type BackendKind = 'meta' | 'free-community';
+
+/**
+ * The Realistic Photo backends named in PROVIDER_GENERATOR, in order. A backend that cannot start
+ * (no key, bad URL) is skipped with a log line instead of crashing the server.
+ */
+function createBackends(): { backend: TryOnBackend | null; kinds: BackendKind[] } {
+  const backends: TryOnBackend[] = [];
+  const kinds: BackendKind[] = [];
+
+  for (const name of config.generatorChain) {
+    if (name === 'muse-image') {
+      if (!config.meta.apiKey) {
+        console.error('[generate] muse-image skipped: META_API_KEY is not set.');
+        continue;
+      }
+      try {
+        backends.push(
+          new MuseImageBackend({
+            apiKey: config.meta.apiKey,
+            baseUrl: config.meta.baseUrl,
+            model: config.meta.modelMuseImage,
+            timeoutMs: config.museImage.timeoutMs,
+          }),
+        );
+        kinds.push('meta');
+      } catch (err) {
+        console.error('[generate] muse-image disabled:', (err as Error).message);
+      }
+    } else if (name === 'leffa-space') {
+      try {
+        backends.push(
+          new LeffaSpaceBackend({
+            client: new GradioClient({
+              baseUrl: config.freeTryOn.spaceUrl,
+              token: config.freeTryOn.hfToken,
+              timeoutMs: config.freeTryOn.timeoutMs,
+            }),
+            apiName: config.freeTryOn.apiName,
+          }),
+        );
+        kinds.push('free-community');
+      } catch (err) {
+        console.error('[generate] free try-on disabled:', (err as Error).message);
+      }
+    } else if (name !== 'local' && name !== 'mock') {
+      console.error(`[generate] unknown PROVIDER_GENERATOR entry "${name}" ignored.`);
+    }
   }
+
+  if (backends.length === 0) return { backend: null, kinds };
+  return { backend: backends.length === 1 ? backends[0] : new BackendChain(backends), kinds };
 }
-const freeBackend = createFreeBackend();
+const { backend: tryOnBackend, kinds: backendKinds } = createBackends();
 
 // ---------------------------------------------------------------------------
 // Middleware
@@ -79,8 +118,10 @@ app.get('/api/health', (c) =>
       realtimeMaxSessionSeconds: config.decart.maxSessionSeconds,
       metaConfigured: !!config.meta.apiKey,
       // The browser registers the remote generator only when this is true.
-      remoteTryOn: !!freeBackend,
-      remoteTryOnLabel: freeBackend?.label ?? '',
+      remoteTryOn: !!tryOnBackend,
+      remoteTryOnLabel: tryOnBackend?.label ?? '',
+      // Where the photo goes, so the consent dialog can say so truthfully: 'meta' and/or 'free-community'.
+      remoteTryOnKinds: backendKinds,
     },
   }),
 );
@@ -208,8 +249,8 @@ const generateLimiter = new RateLimiter(config.rateLimit.generateRPM);
 
 app.post('/api/generate', (c) =>
   handleGenerate(c.req.raw, {
-    enabled: !!freeBackend,
-    backend: freeBackend,
+    enabled: !!tryOnBackend,
+    backend: tryOnBackend,
     limiter: generateLimiter,
     maxConcurrent: config.freeTryOn.maxConcurrent,
   }),
@@ -241,7 +282,7 @@ console.log(`
 ║  TryAnywhere API Server                  ║
 ║  Port: ${String(config.port).padEnd(33)}║
 ║  Env:  ${config.nodeEnv.padEnd(33)}║
-║  AI:   ${(freeBackend ? 'free model (Leffa Space)' : 'off (on-device only)').padEnd(33)}║
+║  AI:   ${(tryOnBackend ? tryOnBackend.label : 'off (on-device only)').slice(0, 33).padEnd(33)}║
 ╚══════════════════════════════════════════╝
 `);
 

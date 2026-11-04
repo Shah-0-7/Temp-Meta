@@ -17,15 +17,13 @@
  * `{"path": <server path>, "meta": {"_type": "gradio.FileData"}}`.
  */
 
+import { BackendError } from './backendError.js';
+
 export type GradioErrorKind = 'quota' | 'timeout' | 'upstream' | 'bad-response';
 
-export class GradioError extends Error {
-  constructor(
-    public readonly kind: GradioErrorKind,
-    message: string,
-    public readonly status?: number,
-  ) {
-    super(message);
+export class GradioError extends BackendError {
+  constructor(kind: GradioErrorKind, message: string, status?: number) {
+    super(kind, message, status);
     this.name = 'GradioError';
   }
 }

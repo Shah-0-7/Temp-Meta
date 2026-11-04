@@ -17,6 +17,7 @@
     "setup:assets": "node scripts/setup-assets.mjs",
     "check:setup": "node scripts/check-setup.mjs",
     "postinstall": "node scripts/setup-assets.mjs || true",
+    "check:meta": "pnpm --filter @tryanywhere/server exec tsx scripts/check-meta.ts",
     "check:free-tryon": "pnpm --filter @tryanywhere/server exec tsx scripts/check-free-tryon.ts"
   },
   "devDependencies": {

@@ -63,6 +63,16 @@ describe('RemoteTryOnGenerator', () => {
     expect(gen.sendsDataOffDevice).toBe(true);
   });
 
+  it('reports the model the server says answered, falling back to the label', async () => {
+    const answered = (async () =>
+      new Response(png(), { status: 200, headers: { 'Content-Type': 'image/png', 'X-Provider': 'Meta Muse Image' } })) as unknown as typeof fetch;
+    expect((await remote(answered).gen.generate(request())).metadata?.provider).toBe('Meta Muse Image');
+
+    const huge = (async () =>
+      new Response(png(), { status: 200, headers: { 'Content-Type': 'image/png', 'X-Provider': 'x'.repeat(200) } })) as unknown as typeof fetch;
+    expect((await remote(huge).gen.generate(request())).metadata?.provider).toBe('Test model');
+  });
+
   it('maps 429 to RateLimitError with the Retry-After delay', async () => {
     const fetchFn = (async () => errorRes(429, 'quota_exhausted', { 'Retry-After': '300' })) as unknown as typeof fetch;
     const err = await remote(fetchFn).gen.generate(request()).catch((e) => e);

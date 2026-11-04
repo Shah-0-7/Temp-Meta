@@ -29,7 +29,19 @@ export interface ServerConfig {
     maxSessionSeconds: number;
   };
 
-  // Free hosted try-on model (Leffa on a Hugging Face Space). On when PROVIDER_GENERATOR=leffa-space.
+  /**
+   * Realistic Photo backends in order, from PROVIDER_GENERATOR (comma separated): `muse-image`
+   * (Meta, needs META_API_KEY), `leffa-space` (free). Anything else, such as `local`, means none.
+   */
+  generatorChain: string[];
+
+  // Meta Muse Image runtime options (the key and base URL are in `meta`).
+  museImage: {
+    enabled: boolean;
+    timeoutMs: number;
+  };
+
+  // Free hosted try-on model (Leffa on a Hugging Face Space). On when PROVIDER_GENERATOR includes leffa-space.
   freeTryOn: {
     enabled: boolean;
     spaceUrl: string;
@@ -74,6 +86,10 @@ export interface ServerConfig {
 }
 
 export function loadConfig(): ServerConfig {
+  const generatorChain = (process.env.PROVIDER_GENERATOR ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   return {
     port: parseInt(process.env.PORT ?? '3001', 10),
     nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -82,7 +98,7 @@ export function loadConfig(): ServerConfig {
 
     meta: {
       baseUrl: process.env.META_API_BASE_URL ?? 'https://api.meta.ai/v1',
-      apiKey: process.env.META_API_KEY ?? '',
+      apiKey: process.env.META_API_KEY || process.env.MODEL_API_KEY || '',
       modelSam: process.env.META_MODEL_SAM ?? 'sam-3.1',
       modelSpark: process.env.META_MODEL_SPARK ?? 'muse-spark-1.3',
       modelMuseImage: process.env.META_MODEL_MUSE_IMAGE ?? 'muse-image-1.0',
@@ -95,8 +111,15 @@ export function loadConfig(): ServerConfig {
       maxSessionSeconds: parseInt(process.env.REALTIME_MAX_SESSION_SECONDS ?? '300', 10),
     },
 
+    generatorChain,
+
+    museImage: {
+      enabled: generatorChain.includes('muse-image'),
+      timeoutMs: parseInt(process.env.MUSE_IMAGE_TIMEOUT_MS ?? '120000', 10),
+    },
+
     freeTryOn: {
-      enabled: (process.env.PROVIDER_GENERATOR ?? '') === 'leffa-space',
+      enabled: generatorChain.includes('leffa-space'),
       spaceUrl: process.env.FREE_TRYON_SPACE_URL || 'https://franciszzj-leffa.hf.space',
       apiName: process.env.FREE_TRYON_API_NAME || 'leffa_predict_vt',
       hfToken: process.env.HF_TOKEN ?? '',

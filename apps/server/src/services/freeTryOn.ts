@@ -18,6 +18,7 @@
  */
 
 import { GradioClient, GradioError, type GradioFile } from './gradioClient.js';
+import { BackendError } from './backendError.js';
 import { RateLimiter, clientKey } from './rateLimit.js';
 
 export type TryOnGarmentType = 'top' | 'outerwear' | 'bottom' | 'dress' | 'hat' | 'glasses' | 'shoes';
@@ -31,6 +32,8 @@ export interface TryOnBackendInput {
 export interface TryOnBackendOutput {
   bytes: Uint8Array;
   contentType: string;
+  /** Which model made it, when the backend is a chain. Defaults to the backend's label. */
+  provider?: string;
 }
 
 export interface TryOnBackend {
@@ -196,18 +199,20 @@ export async function handleGenerate(req: Request, deps: GenerateRouteDeps): Pro
         'Content-Type': result.contentType,
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
-        'X-Provider': backend.label,
+        'X-Provider': result.provider ?? backend.label,
         'Access-Control-Expose-Headers': 'X-Provider',
       },
     });
   } catch (err) {
     // The reason is logged server-side only; the browser gets a generic, safe message.
-    console.error('[generate]', (err as Error).name, String((err as Error).message).replace(/hf_\w+/g, 'hf_[redacted]'));
-    if (err instanceof GradioError) {
+    console.error('[generate]', (err as Error).name, String((err as Error).message).replace(/hf_\w+/g, 'hf_[redacted]').replace(/LLM_[\w.~\-]+/g, 'LLM_[redacted]'));
+    if (err instanceof BackendError) {
       if (err.kind === 'quota') {
-        return fail(429, 'quota_exhausted', 'The free AI model has hit its usage limit for now.', { 'Retry-After': '300' });
+        return fail(429, 'quota_exhausted', 'The AI model has hit its usage limit for now.', { 'Retry-After': '300' });
       }
       if (err.kind === 'timeout') return fail(504, 'timeout', 'The AI model took too long to answer.');
+      // The client turns this code into a refusal that is never retried on another model.
+      if (err.kind === 'policy') return fail(422, 'content_policy', 'The AI model could not use this image.');
     }
     return fail(502, 'upstream_failed', 'The AI model could not produce a result.');
   } finally {

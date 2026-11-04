@@ -25,6 +25,8 @@ export function buildTryOnPrompt(params: TryOnPromptParams): string {
 
   const lines = [
     `Perform a virtual try-on: dress the person in the second reference image with ${garmentLabel} shown in the first reference image.`,
+    'The first image is a product photo of the garment on a plain white background; the white background is not part of the garment.',
+    'Keep the second image\'s framing, camera angle and aspect ratio.',
     '',
     'STRICT requirements:',
     '- Preserve the person\'s face, identity, skin tone, hairstyle, pose, hand positions, and body proportions EXACTLY.',
@@ -46,4 +48,4 @@ export function buildTryOnPrompt(params: TryOnPromptParams): string {
 /**
  * Prompt version identifier for tracking and debugging.
  */
-export const TRYON_PROMPT_VERSION = 'tryon-v1';
+export const TRYON_PROMPT_VERSION = 'tryon-v2';

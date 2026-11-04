@@ -68,7 +68,7 @@ flowchart LR
 | `GarmentSegmenter` | Flood-fill cut-out (no model) | Meta SAM 3.1 |
 | `ImageUnderstanding` | Heuristics (size, alt text, JSON-LD) | Meta Muse Spark |
 | `GarmentNormalizer` | Cut-out only | Meta Muse Image |
-| `TryOnGenerator` | On-device local renderer | Leffa on a Hugging Face Space (free, built, untested live); Meta Muse Image parked |
+| `TryOnGenerator` | On-device local renderer | **Meta Muse Image** (built from Meta's docs, not yet run with a real key) and Leffa on a Hugging Face Space (free, built, untested live), in any order with automatic fallback |
 | `RealtimeTryOn` | Off | Decart (built, optional); a future Meta video model |
 
 Interfaces: `packages/engine/src/providers/types.ts`. Adding a provider is a new file plus a registry entry; the app registry is built in `apps/web/src/lib/appRegistry.ts`.
@@ -83,7 +83,7 @@ Interfaces: `packages/engine/src/providers/types.ts`. Adding a provider is a new
 | M3 Garment ingestion | Done, except the manual click/box select UI |
 | M4 Warp renderer | Done |
 | M5 Realistic Photo flow | Done with the on-device renderer |
-| M6 Model providers | **Partly done, with a free model instead of Meta.** The free Leffa try-on generator is built behind `TryOnGenerator`, with server relay, consent, rate limits and automatic on-device fallback; it has **not been run against the live Space** (run `pnpm check:free-tryon`). Segmentation and image understanding still use the on-device defaults. Meta work is parked on the local branch `m6-meta-wip` |
+| M6 Model providers | **Partly done.** Realistic Photo can use Meta Muse Image and/or the free Leffa model behind `TryOnGenerator`, with server relay, consent, rate limits and automatic on-device fallback. Neither has been run live: run `pnpm check:meta` (needs a key) and `pnpm check:free-tryon`. Segmentation (SAM 3.1) and image understanding (Muse Spark) still use the on-device defaults; their stubs are parked in `apps/server/src/providers/meta/` |
 | M7 Polish | Done |
 | M8 Live AI (Decart) | Built from the docs and tested with a fake SDK; not tried against the live service |
 | M9 Demo readiness | Done (this milestone) |
@@ -94,11 +94,20 @@ Automated: engine typecheck, 100+ unit and contract tests (filters, warp math, p
 
 Not verified by the author: real webcam and MediaPipe inference, the full Vite build, ESLint, the React typecheck against real React types, GPU performance, the live Decart service, the live free Leffa Space, and the Meta models. Run [`QA_CHECKLIST.md`](QA_CHECKLIST.md) on a real machine before showing this to anyone.
 
+## Optional: Meta Muse Image render
+
+1. Create an API key in the Model API dashboard at <https://dev.meta.ai/> (API keys tab). It starts with `LLM_` and is shown once.
+2. In `.env` set `META_API_KEY=...` and `PROVIDER_GENERATOR=muse-image` (or `muse-image,leffa-space` to fall back to the free model), then start the server.
+3. Run `pnpm check:meta person.jpg garment.png`. It does one real render (Meta lists $0.01 per image), writes `tryon-out.png`, and tells you the time taken, so you can judge the result on a real photo before relying on it.
+4. In the app, press Render. The consent dialog names Meta; if you decline, or the call fails, you get the on-device render.
+
+Written from Meta's published API docs: `POST https://api.meta.ai/v1/images/edits` with the garment and person as the two reference images, `muse-image-1.0`, rate limit 150 requests a minute per team. Not known from the docs, and not yet tested: the largest accepted input, latency, and how well a person's face and body are preserved on a try-on prompt.
+
 ## Optional: free AI render (Leffa on Hugging Face)
 
 Realistic Photo normally renders on your device. To get a real AI-generated image instead, with no paid key:
 
-1. In `.env` set `PROVIDER_GENERATOR=leffa-space` and start the server (`pnpm --filter @tryanywhere/server dev`).
+1. In `.env` set `PROVIDER_GENERATOR=leffa-space` (or list it after `muse-image`) and start the server (`pnpm --filter @tryanywhere/server dev`).
 2. Run `pnpm check:free-tryon` once. It lists the Space's endpoints and confirms the endpoint name. Add absolute paths to a person photo and a garment image to run one real render.
 3. In the app, press Render. You will be asked before anything is uploaded. If you say no, or the free model is busy, you get the on-device render.
 

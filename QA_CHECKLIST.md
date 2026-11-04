@@ -103,3 +103,13 @@ Run in desktop Chrome with a real webcam. Tick each box; note the browser, machi
 - [ ] `/api/proxy` on a link that returns HTML answers 415; on a very large image, 413
 - [ ] More than 30 resolves a minute from one client answers 429 with Retry-After
 - [ ] Behind your proxy, requests from two different clients are limited separately (`TRUST_PROXY_HOPS` set correctly)
+
+## Meta Muse Image (needs a key)
+
+- [ ] `pnpm check:meta person.jpg garment.png` prints OK and writes `tryon-out.png`; the render time is acceptable
+- [ ] The result is the same person (face, hair, hands, background) with the garment on, in the same framing
+- [ ] With `PROVIDER_GENERATOR=muse-image`, the consent dialog names Meta and not "community-hosted"; Cancel gives the on-device render and sends nothing
+- [ ] With `muse-image,leffa-space`, the dialog also mentions the free fallback; a wrong `META_API_KEY` ends in a Leffa or on-device render, never an error screen
+- [ ] The result dialog names the model that actually answered (Meta Muse Image, Leffa, or the on-device renderer)
+- [ ] The key never appears in the browser's network tab, the page source or the server log
+

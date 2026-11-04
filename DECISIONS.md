@@ -211,3 +211,10 @@ Each entry records what was decided, why, and any alternatives considered.
 **Date:** 2026-10-30  
 **Decision:** The garment store revokes any `blob:` URL once the candidate list, the selection and the recents no longer reference it. Other stores never borrow a garment's blob URL (the gallery drops it).  
 **Why:** Uploaded and pasted images were never released, and a borrowed URL would break the moment it was released.
+
+## D41 — Meta Muse Image behind the same backend interface as Leffa
+**Date:** 2026-11-04  
+**Decision:** Muse Image is a `TryOnBackend` (`services/museImage.ts`), so `/api/generate`, consent, rate limits and the on-device fallback are unchanged. `PROVIDER_GENERATOR` is now a comma-separated list tried in order (`muse-image,leffa-space`); `BackendChain` moves on after quota, timeout and upstream failures but never after a content-policy refusal. All backends throw one `BackendError`, and the route maps it (quota 429, timeout 504, policy 422 `content_policy`, anything else a generic 502). The route reports which model answered in `X-Provider`, and the consent dialog's wording follows `remoteTryOnKinds` from `/api/health` (Meta, free community, or both), because the photo goes to whichever service is used.  
+**Request shape:** `POST {base}/images/edits`, JSON, `images` = `[garment, person]` as data URLs (the prompt names that order), `size` = the person photo's aspect ratio read from its header (the API treats it as a ratio only), `response_format: b64_json`. Retries (up to 2) on 429, 500 and 503 honour a short `Retry-After`; a long one is reported as busy rather than holding the person's request open; 504 is not retried, per Meta's guidance.  
+**Why:** The endpoint, fields, error codes, price and rate limit come from Meta's published docs (read 2026-11), not from memory. What the docs do not say (input size limit, latency, identity preservation) is left as unverified and covered by `pnpm check:meta`. Keeping Leffa as a fallback means a missing key, an exhausted credit or an outage degrades to a free model and then to the on-device render, not to an error.
+

@@ -1,9 +1,11 @@
 # Parked: Meta model stubs
 
-Nothing in the running server imports these files, or `../../prompts/`. They are
-unfinished placeholders for the Meta Model API (SAM, Muse Spark, Muse Image) and every
-endpoint call in them is a `TODO` that has not been checked against real documentation.
+Muse Image is implemented, in `services/museImage.ts` (see DECISIONS.md D41). The files here are
+what is still unfinished and unused:
 
-Realistic Photo currently uses the free model path instead (`services/freeTryOn.ts`, see
-DECISIONS.md D31 to D35). The Meta work is kept so it can be picked up later; the longer
-in-progress version lives on the `m6-meta-wip` branch.
+- `sam.ts` (SAM 3.1 segmentation) and `spark.ts` (Muse Spark image understanding) are placeholders.
+  Nothing in the running server imports them, or `../../prompts/understanding-v1.ts`.
+- `shared.ts` holds helpers those two would use.
+
+Meta's documentation for both is at https://dev.meta.ai/docs (SAM: `/docs/sam/overview`). Read it
+before filling them in; do not trust the endpoint comments in the stubs.
