@@ -10,6 +10,7 @@ import { serve } from '@hono/node-server';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { loadEnv } from './loadEnv.js';
 import { loadConfig } from './config.js';
 import { resolveProductUrl } from './services/urlResolver.js';
 import { verifyProxySignature, proxyImage, buildProxyUrl, UnsupportedImageError } from './services/imageProxy.js';
@@ -21,6 +22,7 @@ import { MuseImageBackend } from './services/museImage.js';
 import { BackendChain } from './services/backendChain.js';
 import { GradioClient } from './services/gradioClient.js';
 
+loadEnv();
 const config = loadConfig();
 const app = new Hono();
 configureClientIp({ trustProxyHops: config.trustProxyHops });

@@ -9,10 +9,12 @@
  * result is on a real photo of a person.
  */
 
+import { loadEnv } from '../src/loadEnv.js';
 import { readFile, writeFile } from 'node:fs/promises';
 import { MuseImageBackend, redactKey } from '../src/services/museImage.js';
 import { BackendError } from '../src/services/backendError.js';
 
+loadEnv();
 const key = process.env.META_API_KEY || process.env.MODEL_API_KEY || '';
 const base = process.env.META_API_BASE_URL || 'https://api.meta.ai/v1';
 const model = process.env.META_MODEL_MUSE_IMAGE || 'muse-image-1.0';

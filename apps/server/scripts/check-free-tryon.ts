@@ -9,10 +9,12 @@
  * name and the file-upload step. It uses a lot of free GPU quota per run (about 30 s of GPU).
  */
 
+import { loadEnv } from '../src/loadEnv.js';
 import { readFile, writeFile } from 'node:fs/promises';
 import { GradioClient } from '../src/services/gradioClient.js';
 import { LeffaSpaceBackend } from '../src/services/freeTryOn.js';
 
+loadEnv();
 const base = process.env.FREE_TRYON_SPACE_URL || 'https://franciszzj-leffa.hf.space';
 const apiName = process.env.FREE_TRYON_API_NAME || 'leffa_predict_vt';
 const token = process.env.HF_TOKEN ?? '';

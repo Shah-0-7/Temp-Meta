@@ -97,7 +97,7 @@ Not verified by the author: real webcam and MediaPipe inference, the full Vite b
 ## Optional: Meta Muse Image render
 
 1. Create an API key in the Model API dashboard at <https://dev.meta.ai/> (API keys tab). It starts with `LLM_` and is shown once.
-2. In `.env` set `META_API_KEY=...` and `PROVIDER_GENERATOR=muse-image` (or `muse-image,leffa-space` to fall back to the free model), then start the server.
+2. Copy `.env.example` to `.env` (the server and the check scripts read it on start; a variable already set in your shell wins) and set `META_API_KEY=...` and `PROVIDER_GENERATOR=muse-image` (or `muse-image,leffa-space` to fall back to the free model), then start the server.
 3. Run `pnpm check:meta person.jpg garment.png`. It does one real render (Meta lists $0.01 per image), writes `tryon-out.png`, and tells you the time taken, so you can judge the result on a real photo before relying on it.
 4. In the app, press Render. The consent dialog names Meta; if you decline, or the call fails, you get the on-device render.
 
