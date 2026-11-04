@@ -1,0 +1,24 @@
+# Render blueprint for the API server (the Cloudflare site stays static and just points at it).
+# Render: New > Blueprint > pick this repo. It asks for the two secrets marked sync:false.
+# The server runs from TypeScript source with tsx because the engine package is consumed as source.
+services:
+  - type: web
+    name: tryanywhere-api
+    runtime: node
+    plan: free
+    buildCommand: npx --yes pnpm@9 install --frozen-lockfile --prod=false
+    startCommand: cd apps/server && node_modules/.bin/tsx src/index.ts
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PROVIDER_GENERATOR
+        value: muse-image,leffa-space
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: PROXY_HMAC_SECRET
+        generateValue: true
+      - key: META_API_KEY          # paste in the Render dashboard, never commit it
+        sync: false
+      - key: ALLOWED_ORIGINS       # your Cloudflare site, e.g. https://tryanywhere.example.workers.dev
+        sync: false

@@ -124,6 +124,8 @@ The repo root has a `wrangler.jsonc` that publishes the built web app (`apps/web
 
 The deployed site works fully on-device (camera, tracking, samples, Realistic render, gallery). The API server is not part of that deploy, so pasting product links and Live AI need a separately hosted server: set `VITE_API_URL` at build time to its URL. Without it, a production build never contacts any server.
 
+**Hosting the server (so the live site can use Meta):** `render.yaml` is a Render blueprint. In Render choose New > Blueprint, pick this repo, and paste `META_API_KEY` and `ALLOWED_ORIGINS` (your Cloudflare site's URL) when asked. Then set `VITE_API_URL` to the Render URL in the Cloudflare build settings and redeploy the site. The free Render plan sleeps when idle, so the first request after a pause is slow. Not tested against a real Render account yet.
+
 ## Project docs
 
 - [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md): 2-minute demo, what to say and what not to claim
