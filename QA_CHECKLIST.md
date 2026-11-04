@@ -93,6 +93,8 @@ Run in desktop Chrome with a real webcam. Tick each box; note the browser, machi
 - [ ] An upload over 15 MB, or a file that is not an image, shows a readable message
 - [ ] Try three garments, then reopen the panel: "Tried earlier" shows them and one tap switches back
 - [ ] Press C with a garment on and your shoulders in view: "Saved to your gallery" appears and the picture has the garment on you. With no garment, or out of view, it says why and saves nothing
+- [ ] On-device render with a patterned shirt (plaid or stripes) and a plain dark garment: the pattern does not show on or around the garment, and there is no light outline along its edge
+- [ ] On-device render with arms folded across the chest: the bare forearms stay in front of the garment with no floating skin patches
 - [ ] Start a Realistic render, then press Esc before it finishes: the panel stays closed and nothing is added to the gallery
 - [ ] Start a render, then start another: only the second result appears
 - [ ] Paste a link for a slow or dead site: it stops with a message within about 25 seconds, and a second lookup started meanwhile wins

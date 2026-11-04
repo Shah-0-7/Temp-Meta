@@ -103,7 +103,7 @@ export function getAppRegistry(): Promise<ProviderRegistry> {
           analyzer = new StillAnalyzer(assets);
         }
         const a = await analyzer.analyze(frame);
-        return a ? { landmarks: a.landmarks, occlusion: a.occlusion } : null;
+        return a ? { landmarks: a.landmarks, occlusion: a.occlusion, segmentation: a.segmentation } : null;
       },
     };
 

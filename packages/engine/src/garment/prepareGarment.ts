@@ -19,6 +19,7 @@ import {
   buildCutout,
   filterComponents,
   softenMask,
+  trimBackgroundHalo,
   type RgbaImage,
   type PixelBox,
 } from './cutout.js';
@@ -82,6 +83,8 @@ export function prepareFromRgba(src: RgbaImage, options: PrepareOptions = {}): P
     return { image: src, anchors: defaultAnchors(), confidence: 0, mode: 'none' };
   }
 
+  // A light studio halo around a darker garment would otherwise show as a white outline.
+  if (background) mask = trimBackgroundHalo(src, mask, background);
   const alpha = softenMask(mask, w, h, { erode: 1, feather: 1 });
   const cut = buildCutout(src, alpha, { defringeBackground: background, padding: 0.03 });
   if (!cut) {

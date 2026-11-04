@@ -22,12 +22,14 @@ import type {
   TryOnResult,
   ProviderCapability,
 } from '../types.js';
-import type { Landmark, OcclusionMask } from '../../tracking/types.js';
+import type { Landmark, OcclusionMask, SegmentationMask } from '../../tracking/types.js';
 import { WebGLContext } from '../../renderer/WebGLContext.js';
 import { TierARenderer } from '../../renderer/TierARenderer.js';
 import { deriveControlPoints } from '../../tracking/GarmentKeypoints.js';
 import { prepareGarmentImage } from '../../garment/prepareGarment.js';
 import { PoseModelUnavailableError } from './errors.js';
+import { dominantColor, eraseClothes } from './clothesEraser.js';
+import type { GarmentAnchors } from '../../garment/anchors.js';
 
 export class NoPersonDetectedError extends Error {
   constructor() {
@@ -41,6 +43,8 @@ export class NoPersonDetectedError extends Error {
 export interface StillAnalysisResult {
   landmarks: Landmark[];
   occlusion: OcclusionMask | null;
+  /** The class map behind `occlusion`; lets the renderer recolour the clothes being worn. */
+  segmentation?: SegmentationMask | null;
 }
 
 /** Finds the pose of a captured frame (injected so the engine stays testable and lazy). */
@@ -100,12 +104,13 @@ export class LocalTryOnGenerator implements TryOnGenerator {
       // 1) Where is the body?
       let landmarks: Landmark[] | null = null;
       let occlusion: OcclusionMask | null = null;
+      let segmentation: SegmentationMask | null = null;
       let source: 'still-analysis' | 'live-tracking' = 'still-analysis';
 
       if (this._analyze) {
         try {
           const a = await this._analyze(person);
-          if (a) { landmarks = a.landmarks; occlusion = a.occlusion; }
+          if (a) { landmarks = a.landmarks; occlusion = a.occlusion; segmentation = a.segmentation ?? null; }
         } catch (err) {
           console.warn('[LocalTryOn] Still analysis failed, trying live tracking data:', err);
           if (!request.tracking) throw new PoseModelUnavailableError(err);
@@ -155,7 +160,27 @@ export class LocalTryOnGenerator implements TryOnGenerator {
         const now = performance.now();
         renderer.snapTo(cps, now);
         renderer.setOcclusionMask(occlusion);
-        renderer.draw(person, now);
+
+        // Hide the clothes being worn, so they do not peek out around the new garment.
+        // The cleaned frame is what the renderer draws under the garment AND reads its lighting from,
+        // so the old shirt's pattern cannot show through the new garment either.
+        let frame: TexImageSource = person;
+        let clothesErased = false;
+        if (segmentation) {
+          try {
+            const cleaned = buildCleanedFrame(
+              person, width, height, segmentation, landmarks, garment.canvas, garment.anchors,
+              request.garmentType === 'outerwear' ? 0.2 : 0.12,
+            );
+            if (cleaned) {
+              frame = cleaned;
+              clothesErased = true;
+            }
+          } catch (err) {
+            console.warn('[LocalTryOn] Could not hide the current clothes, rendering without that step:', err);
+          }
+        }
+        renderer.draw(frame, now);
 
         const blob = await new Promise<Blob>((resolve, reject) =>
           canvas.toBlob(
@@ -176,6 +201,7 @@ export class LocalTryOnGenerator implements TryOnGenerator {
             garmentCutout: garment.mode,
             garmentConfidence: garment.confidence,
             occlusion: occlusion !== null,
+            clothesErased,
             note: 'Rendered on your device. Nothing was uploaded.',
           },
         };
@@ -189,4 +215,54 @@ export class LocalTryOnGenerator implements TryOnGenerator {
       garmentBitmap.close();
     }
   }
+}
+
+/** True when the garment's sleeves run well past the elbow (measured from its silhouette). */
+export function hasLongSleeves(anchors: GarmentAnchors): boolean {
+  const drops: number[] = [];
+  if (anchors.sleeveEndL) drops.push(anchors.sleeveEndL[1] - anchors.shoulderL[1]);
+  if (anchors.sleeveEndR) drops.push(anchors.sleeveEndR[1] - anchors.shoulderR[1]);
+  if (!drops.length) return false;
+  return drops.reduce((a, b) => a + b, 0) / drops.length > 0.4;
+}
+
+/**
+ * The person's frame with the clothes they are wearing recoloured. Null when there was nothing
+ * to change. `hemExtend` is how far below the hip joints the new garment's hem reaches.
+ */
+function buildCleanedFrame(
+  person: ImageBitmap,
+  width: number,
+  height: number,
+  segmentation: SegmentationMask,
+  landmarks: Landmark[],
+  garmentCanvas: HTMLCanvasElement | OffscreenCanvas,
+  anchors: GarmentAnchors,
+  hemExtend: number,
+): HTMLCanvasElement | null {
+  const gctx = garmentCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D | null;
+  if (!gctx) return null;
+  const g = gctx.getImageData(0, 0, garmentCanvas.width, garmentCanvas.height);
+  const color = dominantColor(g.data, g.width, g.height);
+  if (!color) return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(person, 0, 0, width, height);
+  const frame = ctx.getImageData(0, 0, width, height);
+
+  const result = eraseClothes({
+    image: { data: frame.data, width, height },
+    segmentation,
+    landmarks,
+    garmentColor: color,
+    longSleeves: hasLongSleeves(anchors),
+    hemExtend,
+  });
+  if (!result) return null;
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(result.image.data), width, height), 0, 0);
+  return canvas;
 }

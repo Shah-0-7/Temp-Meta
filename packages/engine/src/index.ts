@@ -160,6 +160,8 @@ export {
   RemoteTryOnError,
   type RemoteTryOnOptions,
 } from './providers/tryon-generator/RemoteTryOnGenerator.js';
+export { eraseClothes, dominantColor, skinColor, buildZones } from './providers/tryon-generator/clothesEraser.js';
+export type { EraseInput, EraseResult, EraseOptions, Rgb } from './providers/tryon-generator/clothesEraser.js';
 export { FallbackTryOnGenerator, fallbackReason } from './providers/tryon-generator/FallbackTryOnGenerator.js';
 export { createAppRegistry } from './providers/defaults.js';
 

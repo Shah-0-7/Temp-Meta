@@ -338,6 +338,69 @@ export function erodeMask(mask: Uint8Array, width: number, height: number, radiu
   return src === mask ? new Uint8Array(mask) : src;
 }
 
+/**
+ * Studio photos often carry a soft light halo (shadow, glow, JPEG ringing) that a colour-tolerance
+ * flood fill counts as garment. Inside a thin band along the cut-out edge, drops pixels that look
+ * clearly more like the background than like the garment fabric just inside them.
+ *
+ * Does nothing when the garment is close to the background colour (it could not tell them apart).
+ */
+export function trimBackgroundHalo(
+  img: RgbaImage,
+  mask: Uint8Array,
+  background: { r: number; g: number; b: number },
+  options: { band?: number; ratio?: number } = {},
+): Uint8Array {
+  const { width: w, height: h } = img;
+  const longest = Math.max(w, h);
+  const band = Math.max(2, Math.min(24, options.band ?? Math.round(longest * 0.015)));
+  const ratio = options.ratio ?? 0.75;
+  const inner = erodeMask(mask, w, h, band);
+
+  // Nearest interior pixel for every band pixel (multi-source breadth-first fill through the mask).
+  const from = new Int32Array(w * h).fill(-1);
+  const queue = new Int32Array(w * h);
+  let head = 0;
+  let tail = 0;
+  for (let i = 0; i < inner.length; i++) {
+    if (inner[i]) {
+      from[i] = i;
+      queue[tail++] = i;
+    }
+  }
+  if (tail === 0) return mask;
+  while (head < tail) {
+    const i = queue[head++];
+    const x = i % w;
+    const y = (i - x) / w;
+    const src = from[i];
+    const visit = (j: number) => {
+      if (mask[j] && from[j] < 0) {
+        from[j] = src;
+        queue[tail++] = j;
+      }
+    };
+    if (x > 0) visit(i - 1);
+    if (x < w - 1) visit(i + 1);
+    if (y > 0) visit(i - w);
+    if (y < h - 1) visit(i + w);
+  }
+
+  const out = new Uint8Array(mask);
+  for (let i = 0; i < mask.length; i++) {
+    if (!mask[i] || inner[i] || from[i] < 0) continue;
+    const q = i * 4;
+    const f = from[i] * 4;
+    const fr = img.data[f], fg = img.data[f + 1], fb = img.data[f + 2];
+    // The fabric itself must stand out from the background, or this test means nothing.
+    if (colorDistance(fr, fg, fb, background.r, background.g, background.b) < 90) continue;
+    const dBg = colorDistance(img.data[q], img.data[q + 1], img.data[q + 2], background.r, background.g, background.b);
+    const dIn = colorDistance(img.data[q], img.data[q + 1], img.data[q + 2], fr, fg, fb);
+    if (dBg < dIn * ratio) out[i] = 0;
+  }
+  return filterComponents(out, w, h);
+}
+
 /** Separable box blur of a 0..255 raster using running sums. */
 export function boxBlur(src: Uint8Array, width: number, height: number, radius: number): Uint8Array {
   if (radius <= 0) return new Uint8Array(src);

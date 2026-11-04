@@ -45,6 +45,13 @@ Updated as development progresses.
 - Natural drape, folds, creases that match the person's pose and body
 - Preserves face, identity, background, and lighting
 
+### On-device render: what it does and does not do
+- **Hides the clothes you are wearing.** Where the segmenter finds your current clothes (torso and arms only), they are recoloured before the new garment is drawn: the torso to the new garment's colour, the arms to skin for a short-sleeve garment or to the garment's colour for a long-sleeve one. Only broad light and shadow are kept, so plaid or stripes do not show through. It is a recolour, not a repaint: it cannot invent what is under your clothes, and the new garment is still a flat photo bent to your pose.
+- **Rough edges where the class map is coarse.** The segmenter's clothes map is 256x256, so a recoloured edge can sit a few pixels off the real outline, and a thin fringe of the old fabric can remain next to hands or bare forearms. Trousers are left alone; an untucked shirt that hangs below the new garment's hem can still peek out.
+- **Folded arms.** A bare forearm held across the torso is kept in front of the garment along its whole length. A forearm already covered by a sleeve is not treated as bare skin.
+- **Studio halos are trimmed.** A light shadow or glow around a dark garment in a product photo is cut away from the edge. A garment close to the background colour is left as it was.
+- **Tested only on synthetic poses and masks.** The real pose and segmentation models could not be downloaded where this was developed, so the result on real photos is unconfirmed.
+
 ### What it cannot do
 - **Not real-time.** The on-device render takes a few seconds. The free AI model queues on a shared GPU and can take well over a minute.
 - **Occasional artifacts.** AI generation may alter small details (logos, text on garments) or produce minor inconsistencies.

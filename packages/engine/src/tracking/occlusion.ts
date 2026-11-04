@@ -49,6 +49,13 @@ function handCapsule(
   const elbow = lm[side === 'left' ? I.LEFT_ELBOW : I.RIGHT_ELBOW];
   if (!visible(wrist, 0.4)) return null;
 
+  // An arm folded across the body is in front of the torso along its whole length. Keeping only
+  // the hand would leave a floating patch of skin, so keep the whole bare forearm.
+  if (visible(elbow, 0.3) && wristOverTorso(lm, wrist, aspect)) {
+    reach = 1;
+    radiusFrac = Math.max(radiusFrac, 0.4);
+  }
+
   const tipIdx =
     side === 'left'
       ? [I.LEFT_INDEX, I.LEFT_PINKY, I.LEFT_THUMB]
@@ -78,6 +85,24 @@ function handCapsule(
     by,
     r: Math.max(0.03, forearm * radiusFrac),
   };
+}
+
+/** The wrist sits within the width of the torso, between the shoulder line and the hips. */
+function wristOverTorso(lm: readonly Landmark[], wrist: Landmark, aspect: number): boolean {
+  const I = PoseIndex;
+  const sl = lm[I.LEFT_SHOULDER];
+  const sr = lm[I.RIGHT_SHOULDER];
+  if (!visible(sl, 0.3) || !visible(sr, 0.3)) return false;
+  const width = Math.abs(sl.x - sr.x) * aspect;
+  if (width < 0.02) return false;
+  const left = Math.min(sl.x, sr.x) - 0.1 * (width / aspect);
+  const right = Math.max(sl.x, sr.x) + 0.1 * (width / aspect);
+  const top = Math.min(sl.y, sr.y);
+  const hl = lm[I.LEFT_HIP];
+  const hr = lm[I.RIGHT_HIP];
+  const bottom =
+    visible(hl, 0.4) && visible(hr, 0.4) ? Math.max(hl.y, hr.y) : top + 1.6 * width;
+  return wrist.x >= left && wrist.x <= right && wrist.y >= top && wrist.y <= bottom;
 }
 
 function distSqToSegment(px: number, py: number, c: Capsule): number {
