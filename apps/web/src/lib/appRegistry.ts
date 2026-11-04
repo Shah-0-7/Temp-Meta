@@ -48,13 +48,21 @@ const NONE: ServerFeatures = {
 
 let featuresPromise: Promise<ServerFeatures> | null = null;
 
-/** Asks the server what is available. A missing server just means "nothing optional". */
+/** How long to wait for the server's answer. A sleeping free host can take most of a minute to wake. */
+const HEALTH_TIMEOUT_MS = 20_000;
+
+/**
+ * Asks the server what is available. No server configured just means "nothing optional" and is
+ * remembered. A server that is configured but did not answer (asleep, offline) is NOT remembered,
+ * so the next call asks again instead of locking the session to the on-device renderer.
+ */
 export function getServerFeatures(): Promise<ServerFeatures> {
-  featuresPromise ??= (async () => {
-    if (!API_BASE) return NONE;
+  if (!API_BASE) return Promise.resolve(NONE);
+  if (featuresPromise) return featuresPromise;
+  const attempt = (async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(3000) });
-      if (!res.ok) return NONE;
+      const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const f = (await res.json())?.features ?? {};
       return {
         realtimeTryOn: f.realtimeTryOn === true,
@@ -66,12 +74,20 @@ export function getServerFeatures(): Promise<ServerFeatures> {
         remoteTryOnKinds: Array.isArray(f.remoteTryOnKinds)
           ? f.remoteTryOnKinds.filter((k: unknown): k is RemoteKind => k === 'meta' || k === 'free-community')
           : [],
-      };
+      } satisfies ServerFeatures;
     } catch {
+      featuresPromise = null; // try again next time
+      registryPromise = null; // and rebuild the registry with whatever the next answer says
       return NONE;
     }
   })();
-  return featuresPromise;
+  featuresPromise = attempt;
+  return attempt;
+}
+
+/** Wakes the server early (a sleeping free host) so the first render does not wait for it. */
+export function warmServer(): void {
+  void getServerFeatures();
 }
 
 let registryPromise: Promise<ProviderRegistry> | null = null;

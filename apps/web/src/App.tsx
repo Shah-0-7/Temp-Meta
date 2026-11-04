@@ -18,6 +18,7 @@ import { useRealtimeLifecycle, startRealtime, stopRealtime } from './hooks/useRe
 import { useRealtimeStore } from './stores/realtimeStore';
 import { useConsentStore } from './stores/consentStore';
 import { findShortcut } from './lib/shortcuts';
+import { warmServer } from './lib/appRegistry';
 import { useCamera } from './hooks/useCamera';
 import { useRealisticRender } from './hooks/useRealisticRender';
 
@@ -27,6 +28,11 @@ export function App() {
   const { toggleMirror } = useCamera();
   const { render, quickPhoto } = useRealisticRender();
   useRealtimeLifecycle();
+
+  // Ask the server what it offers as soon as the app opens (also wakes a sleeping free host).
+  useEffect(() => {
+    warmServer();
+  }, []);
 
   // Keyboard shortcuts (the list lives in lib/shortcuts.ts, shared with the help dialog)
   useEffect(() => {
